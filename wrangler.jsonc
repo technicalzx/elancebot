@@ -1,0 +1,44 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "elancebot",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "upload_source_maps": true,
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "redact_query_string": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "elancebot-prod",
+      "database_id": "79f50dcf-a7c5-4759-8914-6d7b0512e78d",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "PUBLIC_ORIGIN": "https://elancebot.com",
+    "URL_ALLOWED_HOSTS": ""
+  },
+  "env": {
+    "preview": {
+      "name": "elancebot-preview",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "elancebot-preview",
+          "database_id": "c3ed5add-d219-4bc5-8e32-a08ce113c050",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "preview",
+        "PUBLIC_ORIGIN": "https://elancebot-preview.abuhuraira-113.workers.dev",
+        "URL_ALLOWED_HOSTS": "elancebot-preview.abuhuraira-113.workers.dev"
+      }
+    }
+  }
+}
