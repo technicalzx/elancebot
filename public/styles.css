@@ -194,6 +194,7 @@ h1 { margin-bottom: 22px; max-width: 540px; font-size: clamp(46px, 5.1vw, 70px);
 body.app-mode .site-header, body.app-mode .site-footer { display: none; }
 body.app-mode #main-content { min-height: 100dvh; }
 .app-shell { display: grid; min-height: 100dvh; grid-template-columns: 245px minmax(0, 1fr); }
+.app-backdrop { display: none; }
 .app-sidebar { position: sticky; top: 0; z-index: 20; display: flex; flex-direction: column; height: 100dvh; padding: 18px 12px 14px; background: var(--surface); border-right: 1px solid var(--line); }
 .app-sidebar-top { display: flex; align-items: center; justify-content: space-between; padding: 3px 9px 25px; }
 .app-brand { font-size: 18px; }
@@ -240,6 +241,10 @@ body.app-mode #main-content { min-height: 100dvh; }
 .metric-label { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; font-weight: 700; }
 .metric-label span { color: var(--blue); font-size: 15px; }
 .metric-value { margin: 15px 0 3px; font-size: 29px; font-weight: 790; letter-spacing: -.055em; }
+.metric-value { display: block; }
+.metric-value small { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; font-weight: 500; letter-spacing: normal; }
+.card-header { padding: 18px 20px 8px; }
+.card-header h2 { margin: 0; font-size: 18px; }
 .metric-detail { color: var(--muted); font-size: 11px; }
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.52fr) minmax(280px, .75fr); gap: 16px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 5px 17px rgba(31, 55, 98, .025); }
@@ -461,8 +466,8 @@ pre { padding: 14px; background: var(--paper); border: 1px solid var(--line); bo
   .footer-main p { margin: 0; }
 
   .app-shell { display: block; }
-  .app-sidebar { position: fixed; top: 0; bottom: 0; left: 0; width: min(290px, 88vw); height: 100dvh; transform: translateX(-105%); transition: transform .2s ease; box-shadow: var(--shadow); }
-  body.sidebar-open .app-sidebar { transform: translateX(0); }
+  .app-sidebar { position: fixed; top: 0; bottom: 0; left: 0; width: min(290px, 88vw); height: 100dvh; visibility: hidden; transform: translateX(-105%); transition: transform .2s ease; box-shadow: var(--shadow); }
+  body.sidebar-open .app-sidebar { visibility: visible; transform: translateX(0); }
   .app-backdrop { position: fixed; inset: 0; z-index: 15; display: none; background: rgba(12, 23, 44, .37); }
   body.sidebar-open .app-backdrop { display: block; }
   .sidebar-close, .mobile-menu { display: grid; }

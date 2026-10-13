@@ -90,6 +90,7 @@ No runtime npm dependencies; native crypto comes from the Workers runtime. Priva
 - [Authorized data-source policy](docs/data-source-policy.md)
 - [API security](docs/api-security.md)
 - [Release gates and standards mapping](docs/release-checklist.md)
+- [Preview verification and known limitations](docs/verification.md)
 - [Deployment, recovery and operations](docs/operations.md)
 - [Privacy](PRIVACY.md) · [Security reporting](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 

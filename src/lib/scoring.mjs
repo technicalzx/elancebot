@@ -260,7 +260,7 @@ export function auditUrlMetadata(rawMetadata = {}) {
   const hasStructuredData = Boolean(metadata.hasStructuredData);
   const titleLength = title.length;
   const descriptionLength = description.length;
-  const noindex = /(^|[,\s])noindex([,\s]|$)/i.test(robots);
+  const noindex = /(^|[,\s])(?:noindex|none)([,\s]|$)/i.test(robots);
 
   const metadataScore = (titleLength >= 15 && titleLength <= 60 ? 15 : titleLength ? 7 : 0) + (descriptionLength >= 70 && descriptionLength <= 160 ? 15 : descriptionLength ? 7 : 0);
   const onPageScore = (h1 ? 12 : 0) + (lang ? 4 : 0) + (hasViewport ? 4 : 0);

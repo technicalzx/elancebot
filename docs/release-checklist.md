@@ -8,7 +8,7 @@ Lifecycle: requirements/acceptance → UX/architecture/threat model → bounded 
 - [x] Password/session, ownership and key-scope tests in real Worker/D1 runtime.
 - [x] Input bounds, CSRF, URL rejection, recovery revocation and export/delete tests.
 - [x] Typecheck, reproducible build, lockfile and dependency audit.
-- [ ] Record GitHub CI, live smoke and browser verification before handoff.
+- [x] Record GitHub CI, live smoke and browser verification before handoff; see [verification evidence](verification.md).
 
 ## Production gates — pending
 

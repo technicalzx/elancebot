@@ -248,7 +248,7 @@ export default {
         if (asset) {
           let body = asset.content;
           if (url.pathname === '/' || url.pathname === '/index.html') body = body.replaceAll('https://elancebot.com', env.PUBLIC_ORIGIN);
-          response = new Response(request.method === 'HEAD' ? null : body, { headers: { 'Content-Type': asset.type, 'Cache-Control': 'public, max-age=300' } });
+          response = new Response(request.method === 'HEAD' ? null : body, { headers: { 'Content-Type': asset.type, 'Cache-Control': asset.type.startsWith('text/html') ? 'no-cache' : 'public, max-age=300' } });
         } else response = new Response('Page not found', { status: 404 });
       }
     } catch (error) {

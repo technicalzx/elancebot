@@ -10,6 +10,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Future production identity, anti-abuse and accessibility hardening tracked in the roadmap.
 
+### Fixed
+
+- Desktop workspace grid placement and mobile navigation visibility, focus trapping and Escape handling.
+- Content-versioned styles/scripts and revalidated HTML to avoid stale assets after deployment.
+- Website `robots: none` handling, with tests for bounded HTML, redirects, content types and self-review provenance.
+
+### Changed
+
+- Explicit preview dry-run builds and asset generation before remote development.
+- Recorded live preview verification and production limitations.
+
 ## [0.1.0] - 2026-10-13
 
 ### Added

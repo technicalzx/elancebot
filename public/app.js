@@ -19,6 +19,14 @@ function download(name, value) {
   const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function go(path) { if (location.hash === '#app/' + path) route(); else location.hash = 'app/' + path; }
+function sidebar(open) {
+  const wasOpen = document.body.classList.contains('sidebar-open');
+  document.body.classList.toggle('sidebar-open', open);
+  $('.mobile-menu').setAttribute('aria-expanded', String(open));
+  $('.app-content-wrap').inert = open;
+  if (open) $('.sidebar-close').focus();
+  else if (wasOpen) $('.mobile-menu').focus({ preventScroll:true });
+}
 function header(title, subtitle, actions = '') { return `<div class="app-page-header"><div><p class="eyebrow">YOUR WORKSPACE</p><h1 tabindex="-1">${escape(title)}</h1><p>${escape(subtitle)}</p></div><div class="header-actions-app">${actions}</div></div>`; }
 const newButton = '<a class="button button-primary" href="#app/new">+ New review</a>';
 function field(name, label, value = '', options = {}) {
@@ -109,7 +117,7 @@ function settingsPage() {
 }
 async function route() {
   const version = ++routeVersion, isApp = location.hash.startsWith('#app/');
-  document.body.classList.remove('sidebar-open');
+  sidebar(false);
   $('#marketing-view').hidden = isApp; $('#site-header').hidden = isApp; $('#site-footer').hidden = isApp; $('#app-view').hidden = !isApp;
   if (!isApp) { document.title = 'Elancebot — clearer service-page reviews'; return; }
   if (!user) { openAuth('login'); return; }
@@ -170,13 +178,13 @@ document.addEventListener('submit', async event => {
   finally { if(button.isConnected) { button.disabled = false; button.textContent = oldLabel; } }
 });
 document.addEventListener('click', async event => {
-  const el = event.target.closest('button,a,[data-close-auth]'); if(!el) return;
+  const el = event.target.closest('button,a,[data-close-auth],.app-backdrop'); if(!el) return;
   if (el.matches('[data-route]')) { event.preventDefault(); const dest = el.dataset.route; if(dest === 'home') { closeAuth(); location.hash = ''; } else if(user) go('dashboard'); else openAuth(dest); return; }
   if(el.dataset.auth) { openAuth(el.dataset.auth); return; }
   if(el.matches('[data-close-auth]')) { closeAuth(); if(!user && location.hash.startsWith('#app/')) location.hash = ''; return; }
   if(el.matches('.theme-toggle')) { const dark = document.documentElement.dataset.theme !== 'dark'; document.documentElement.dataset.theme = dark ? 'dark' : 'light'; try { localStorage.setItem('elancebot-theme', dark ? 'dark' : 'light'); } catch {} updateTheme(); return; }
-  if(el.matches('.mobile-menu')) { document.body.classList.add('sidebar-open'); return; }
-  if(el.matches('.sidebar-close,.app-backdrop')) { document.body.classList.remove('sidebar-open'); return; }
+  if(el.matches('.mobile-menu')) { sidebar(true); return; }
+  if(el.matches('.sidebar-close,.app-backdrop')) { sidebar(false); return; }
   if(el.matches('.sidebar-user')) { go('settings'); return; }
   try {
     if(el.id === 'signout-button') { await api('/auth/logout','POST'); user = null; currentProject = null; currentAnalyses = []; $('#app-page').replaceChildren(); location.hash = ''; toast('Signed out.'); }
@@ -197,9 +205,10 @@ document.addEventListener('input', event => {
   if(event.target.id === 'project-search') $$('.project-card').forEach(card => card.hidden = !card.textContent.toLowerCase().includes(event.target.value.toLowerCase()));
 });
 document.addEventListener('keydown', event => {
-  if(event.key === 'Escape') { if(!$('#auth-dialog').hidden) { closeAuth(); if(!user) location.hash = ''; } document.body.classList.remove('sidebar-open'); }
-  if(event.key === 'Tab' && !$('#auth-dialog').hidden) {
-    const focusable = $$('button,a,input,select,textarea', $('#auth-dialog')).filter(el => !el.disabled && el.getClientRects().length);
+  if(event.key === 'Escape') { if(!$('#auth-dialog').hidden) { closeAuth(); if(!user) location.hash = ''; } sidebar(false); }
+  const focusRoot = !$('#auth-dialog').hidden ? $('#auth-dialog') : document.body.classList.contains('sidebar-open') ? $('.app-sidebar') : null;
+  if(event.key === 'Tab' && focusRoot) {
+    const focusable = $$('button,a,input,select,textarea', focusRoot).filter(el => !el.disabled && el.getClientRects().length);
     const first = focusable[0], last = focusable.at(-1);
     if(event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
     else if(!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
@@ -209,6 +218,11 @@ function updateTheme() { $$('.theme-toggle').forEach(button => { const dark = do
 async function init() {
   try { document.documentElement.dataset.theme = localStorage.getItem('elancebot-theme') || 'light'; } catch {} updateTheme();
   $('#year').textContent = new Date().getFullYear();
+  if(location.hash.startsWith('#app/')) {
+    $('#marketing-view').hidden = true; $('#site-header').hidden = true; $('#site-footer').hidden = true; $('#app-view').hidden = false;
+    $('#app-page').innerHTML = '<div class="loading-state" role="status">Loading your private workspace…</div>';
+  }
+  matchMedia('(max-width: 760px)').addEventListener('change', () => sidebar(false));
   const results = await Promise.allSettled([api('/auth/session'),api('/tools')]);
   if(results[0].status === 'fulfilled') user = results[0].value.user;
   if(results[1].status === 'fulfilled') capabilities = results[1].value;
