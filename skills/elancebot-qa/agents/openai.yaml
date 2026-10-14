@@ -1,0 +1,3 @@
+interface:
+  display_name: "Elancebot QA"
+  short_description: "Verify tools, isolation, UX and release evidence"

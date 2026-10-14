@@ -1,4 +1,16 @@
-# Preview verification — 2026-10-13
+# Preview verification — 2026-10-14
+
+## v0.2 current release
+
+Worker deployment `72b2ec3f6d3b48b78bfb387d558ebc37`, deployed 2026-10-14 at 00:38 UTC (05:38 Asia/Karachi). Migrations 0001 and 0002 applied to preview only. Build: 204.87 KiB / 57.74 KiB gzip. Typecheck, structure check, 19 unit tests, four Worker/D1 integration suites, dependency audit (zero reported vulnerabilities) and whitespace checks passed.
+
+Live smoke passed registration/session, competitor review, homepage metadata and text extraction, saved URL review reopening, explicit unavailable marketplace connector, calculator/history/favorites/search, export, login/logout and disposable-account cleanup. All five privately supplied marketplace URLs returned 422 `platform_connection_required`; their contents were not analyzed or published.
+
+Browser QA verified synthetic source comparison, reopening, three saved revisions, corrected commercial evidence, rule-version comparison guard, same-rule coverage change 58 to 100 (not rank or earnings), JSON export with both sources, and inert escaped markup. Desktop 1366×900 and mobile 390×844 had no document overflow. Mobile Escape restored menu-button focus. No warning/error console entries were observed in the final check. Viewport override reset; the disposable Browser QA account and synthetic records were deleted. Local screenshots are retained outside Git.
+
+All four installed project skills passed validation. The source-acquisition architecture considers self-hosted Crawl4AI without end-user provider keys, but no crawler service is deployed. AI inference remains disabled. Full VAPT, accessibility conformance, Core Web Vitals, production identity, operational gates, marketplace connectors and the custom domain remain incomplete. Exact-head GitHub CI must be checked after publication; earlier runs do not cover this release.
+
+## Historical v0.1 evidence
 
 This is evidence for the v0.1 preview, not a security certification or a claim that the full product roadmap is complete.
 

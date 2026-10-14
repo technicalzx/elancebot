@@ -12,7 +12,7 @@ Assets: account access, private content, credentials, operating budget and deplo
 | SSRF | Exact allowlist + address/platform blocks; no redirects | Operator public DNS review; egress pinning before expansion |
 | Resource exhaustion | Body/time/record quotas + atomic rates | Managed anti-bot, global budgets/load tests |
 | Token leakage | Hash-at-rest; no-store; one-time display; query redaction | Review monitoring integrations |
-| Prompt injection | No AI/tool execution from fetched HTML | Isolate data when AI is added |
+| Prompt injection | Optional AI disabled; adapter treats sources as untrusted, exposes no tools, bounds output and validates evidence quotes | Live adversarial/quality evaluation before enablement; human verification of every generated claim |
 | Data loss | Export, isolated environments | Restore drill/retention before production |
 | Supply chain | Lockfile, pinned CI actions, read-only CI token | SBOM, secret scan, release attestations |
 | Misleading rankings | Versioned heuristic/source limitations | Provider-backed metrics only if authorized |

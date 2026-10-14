@@ -5,13 +5,13 @@
 | Preview | elancebot-preview / elancebot-preview | Deployed, noindex; nonsensitive test content only |
 | Production | elancebot / elancebot-prod | Reserved configuration/database, not deployed |
 
-No elancebot.com zone was found in the connected Cloudflare account; DNS was not changed.
+The user confirmed elancebot.com belongs to their other Cloudflare account and will attach it later. Its zone is absent from the connected account; DNS was not changed. Domain attachment does not block independent development and preview releases.
 
 ## Deploy
 
 Run `npm ci`, `npm run check`, `npm run typecheck`, `npm test`, `npm run test:integration`. Build via `npm run build`. Apply preview migrations then use `npm run deploy:preview` with authenticated Wrangler, or upload `dist/worker.js` through the Cloudflare Workers API with bindings matching wrangler.jsonc. Never commit deployment tokens or database exports.
 
-API-based initial migration executes checked-in SQL and records `0001_initial.sql` in Wrangler's `d1_migrations` ledger. Add future numbered migrations; do not rerun initial CREATE statements. Preview/production migration state is separate.
+API-based migrations execute checked-in SQL after inspecting the migration ledger and schema. Preview now has `0001_initial.sql` and additive `0002_tool_workspace.sql` recorded in Wrangler's `d1_migrations` ledger. Add future numbered migrations; do not rerun initial CREATE statements. Preview/production migration state is separate. Apply pending migrations before deploying code that queries new tables; verify the ledger afterward.
 
 Smoke test creates and deletes only a disposable account:
 
@@ -19,7 +19,7 @@ Smoke test creates and deletes only a disposable account:
 ELANCEBOT_TEST_ORIGIN=https://elancebot-preview.abuhuraira-113.workers.dev node scripts/smoke-preview.mjs
 ```
 
-PowerShell: set `$env:ELANCEBOT_TEST_ORIGIN` first. The script refuses non-preview hosts and checks signup, comparison, homepage metadata, export, login/logout and deletion without printing credentials. Do not disable live rate protection to bypass a testing limit.
+PowerShell: set `$env:ELANCEBOT_TEST_ORIGIN` first. The script refuses non-preview hosts and checks release/catalog, signup, comparison, homepage metadata, calculator accuracy, favorites/recent state, saved history/search, export, login/logout and deletion without printing credentials. Do not disable live rate protection to bypass a testing limit.
 
 ## Observe and respond
 

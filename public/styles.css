@@ -195,6 +195,28 @@ body.app-mode .site-header, body.app-mode .site-footer { display: none; }
 body.app-mode #main-content { min-height: 100dvh; }
 .app-shell { display: grid; min-height: 100dvh; grid-template-columns: 245px minmax(0, 1fr); }
 .app-backdrop { display: none; }
+.toolkit-guide { max-width:860px; padding-block:40px; }
+.toolkit-guide h1 { font-size:clamp(32px,5vw,54px); }
+.toolkit-guide h2 { margin-top:32px; }
+.toolkit-guide p { line-height:1.75; }
+.tool-filters { display:flex; flex-wrap:wrap; gap:16px; align-items:end; padding:20px; margin-bottom:16px; }
+.tool-filters label { display:grid; gap:8px; flex:1 1 170px; font-weight:600; }
+.tool-filters input,.tool-filters select { width:100%; min-width:0; padding:10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--ink); font:inherit; }
+.favorite-button { padding:7px 12px; min-width:44px; }
+.tool-values { display:grid; gap:12px; margin:22px 0; }
+.tool-values div { padding-bottom:12px; border-bottom:1px solid var(--line); min-width:0; }
+.tool-values dt { color:var(--muted); font-size:13px; }
+.tool-values dd { margin:6px 0 0; font-weight:700; white-space:pre-wrap; overflow-wrap:anywhere; }
+.insight-intro { margin-bottom:20px; border-left:4px solid var(--blue); }
+.insight-summary { margin-bottom:20px; }
+.insight-sources { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:24px; }
+.insight-sources article { min-width:0; }
+.insight-sources a { overflow-wrap:anywhere; }
+#insight-form details { margin:22px 0; }
+#insight-form details p { color:var(--muted); line-height:1.7; }
+#result-container > .analysis-section { margin-bottom:20px; }
+#result-container th,#result-container td { vertical-align:top; }
+.app-nav { overflow-y:auto; min-height:0; }
 .app-sidebar { position: sticky; top: 0; z-index: 20; display: flex; flex-direction: column; height: 100dvh; padding: 18px 12px 14px; background: var(--surface); border-right: 1px solid var(--line); }
 .app-sidebar-top { display: flex; align-items: center; justify-content: space-between; padding: 3px 9px 25px; }
 .app-brand { font-size: 18px; }

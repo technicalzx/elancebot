@@ -1,11 +1,16 @@
 import { auditProfile } from './lib/scoring.mjs';
 import { checkOrigin, checkPassword, digest, fail, hashPassword, HttpError, readJson, token, validatePassword } from './lib/security.mjs';
-import { analyzeWebsite } from './lib/website';
+import { analyzeWebsite, readWebsite } from './lib/website';
+import { analyzeOffer, insightContext, referenceUrl, sourcePlatform, sourceText } from './lib/insights.mjs';
+import { generateImprovements, type InsightSource } from './lib/improvements';
 import { openapi } from './openapi';
 import { assets } from './generated-assets.mjs';
+import { findTool, runTool, toolCatalog } from './lib/toolkit.mjs';
 
 type Row = Record<string, any>;
 type Identity = { id: string; email: string; name: string; scope: 'session' | 'read' | 'write' };
+type InsightEnv = Env & {AI?:Ai;AI_ENABLED?:string};
+const aiAvailable = (env:InsightEnv) => env.AI_ENABLED === 'true' && Boolean(env.AI);
 const json = (body: unknown, status = 200, headers: HeadersInit = {}) => Response.json(body, { status, headers });
 const now = () => Math.floor(Date.now() / 1000);
 const statement = (env: Env, sql: string, ...params: unknown[]) => env.DB.prepare(sql).bind(...params);
@@ -75,7 +80,22 @@ async function saveAnalysis(env: Env, project: Row, result: Row) {
   await statement(env, "UPDATE projects SET updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?", project.id).run();
   return analysisOut(inserted!);
 }
-async function website(value: string, env: Env) {
+async function saveInsight(env:Env, user:Identity, project:Row|null, name:string, kind:string, encoded:string, result:Row) {
+  const projectId=project?.id || crypto.randomUUID(), analysisId=crypto.randomUUID();
+  const insertAnalysis=statement(env,`INSERT INTO analyses(id,project_id,result_json,score)
+    SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM projects WHERE id=? AND user_id=?)
+    AND (SELECT count(*) FROM analyses WHERE project_id=?)<50 RETURNING *`,analysisId,projectId,JSON.stringify(result),result.score,projectId,user.id,projectId);
+  // D1 batch is transactional. A rejected quota cannot update the draft or leave
+  // an orphan project; the update is conditional on this exact review existing.
+  const writes=project ? [insertAnalysis,statement(env,`UPDATE projects SET input_json=?,name=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    WHERE id=? AND user_id=? AND EXISTS(SELECT 1 FROM analyses WHERE id=?) RETURNING *`,encoded,name,projectId,user.id,analysisId)] : [statement(env,`INSERT INTO projects(id,user_id,name,kind,input_json)
+    SELECT ?,?,?,?,? WHERE (SELECT count(*) FROM projects WHERE user_id=?)<50 RETURNING *`,projectId,user.id,name,kind,encoded,user.id),insertAnalysis];
+  const saved=await env.DB.batch<Row>(writes);
+  const savedProject=saved[project?1:0].results[0],savedAnalysis=saved[project?0:1].results[0];
+  if(!savedProject || !savedAnalysis) fail(409,'quota',project?'A project supports 50 revisions. Export and create a new project to continue.':'You can save up to 50 projects. Export and remove an old project first.');
+  return {project:projectOut(savedProject),analysis:analysisOut(savedAnalysis)};
+}
+function ownWebsite(value: string, env: Env) {
   let ownPage: Response | undefined;
   // Workers cannot recursively fetch their own route. Inspect the same rendered
   // public HTML locally and label that provenance explicitly instead.
@@ -84,14 +104,26 @@ async function website(value: string, env: Env) {
     if (target.origin === env.PUBLIC_ORIGIN && ['/', '/index.html'].includes(target.pathname))
       ownPage = new Response(assets['/index.html'].content.replaceAll('https://elancebot.com',env.PUBLIC_ORIGIN), { headers:{'content-type':'text/html',...(env.ENVIRONMENT === 'preview' ? {'x-robots-tag':'noindex, nofollow'} : {})} });
   } catch { /* safeUrl supplies the validation error */ }
-  return analyzeWebsite(value, env.URL_ALLOWED_HOSTS, ownPage);
+  return ownPage;
+}
+async function website(value: string, env: Env) {
+  return analyzeWebsite(value, env.URL_ALLOWED_HOSTS, ownWebsite(value,env));
+}
+async function insightSource(value:unknown, supplied:unknown, role:string, env:Env):Promise<InsightSource> {
+  const url=referenceUrl(value).href,platform=sourcePlatform(url);
+  if(supplied !== undefined && supplied !== '' && typeof supplied!=='string') fail(400,'invalid_input','Imported source content must be text.');
+  if(typeof supplied==='string' && supplied.trim()) return {role,url,platform,text:sourceText(supplied),retrieval:'user-supplied-snapshot',capturedAt:new Date().toISOString()};
+  if(platform!=='Website') fail(422,'platform_connection_required',`${platform} URL recognized. Automatic page access is not connected or approved. Add an authorized text/export snapshot for this URL; it will be labeled as supplied, not live-fetched.`);
+  const page=await readWebsite(url,env.URL_ALLOWED_HOSTS,ownWebsite(url,env));
+  return {role,url,platform,text:sourceText(page.content.slice(0,8000)),retrieval:page.retrieval,capturedAt:page.fetchedAt,metadata:page.metadata};
 }
 async function api(request: Request, env: Env, ctx: ExecutionContext) {
   const url = new URL(request.url), path = url.pathname.slice('/api/v1'.length), method = request.method;
+  if (!url.pathname.startsWith('/api/v1/')) fail(404, 'not_found', 'API version not found.');
   checkOrigin(request);
-  if (method === 'GET' && path === '/health') return json({ status: 'ok', version: '0.1.0', environment: env.ENVIRONMENT });
+  if (method === 'GET' && path === '/health') return json({ status: 'ok', version: '0.2.0', environment: env.ENVIRONMENT });
   if (method === 'GET' && path === '/openapi') return json(openapi(url.origin));
-  if (method === 'GET' && path === '/tools') return json({ tools: ['profile','gig','service','competitor','website'], scoringVersion: '1.0.0', allowedUrlHosts: env.URL_ALLOWED_HOSTS.split(',').filter(Boolean), liveRankings: false, aiGenerated: false, accountRecovery: 'offline-recovery-code', emailVerified: false });
+  if (method === 'GET' && path === '/tools') return json({ tools: ['profile','gig','service','competitor','website'], catalog: toolCatalog, scoringVersion: '1.0.0', allowedUrlHosts: env.URL_ALLOWED_HOSTS.split(',').filter(Boolean), liveRankings: false, aiGenerated: false, urlInsights:{enabled:true,aiEnabled:aiAvailable(env),platformAutoFetch:false}, accountRecovery: 'offline-recovery-code', emailVerified: false });
   if (path.startsWith('/auth/') && method === 'POST') {
     const ip = request.headers.get('cf-connecting-ip') || 'local';
     await rate(env, 'auth-ip:' + ip, 20);
@@ -133,12 +165,39 @@ async function api(request: Request, env: Env, ctx: ExecutionContext) {
     fail(404, 'not_found', 'Endpoint not found.');
   }
   const user = await identify(request, env);
+  if(path==='/insights' && method==='POST') {
+    const body=await readJson(request),context=insightContext(body);
+    if(body.attested!==true) fail(400,'attestation_required','Confirm you are authorized to analyze both sources.');
+    if(body.useAi!==undefined && typeof body.useAi!=='boolean') fail(400,'invalid_input','useAi must be a boolean.');
+    if(body.competitorText && !body.competitorUrl) fail(400,'competitor_url_required','Provide the URL associated with the competitor snapshot.');
+    const projectId=text(body.projectId,100);
+    const project=projectId?await ownedProject(env,projectId,user):null;
+    const count=project ? await first(env,'SELECT count(*) AS n FROM analyses WHERE project_id=?',project.id) : await first(env,'SELECT count(*) AS n FROM projects WHERE user_id=?',user.id);
+    if(Number(count?.n)>=50) fail(409,'quota',project?'This project has 50 reviews. Export and start another project.':'You have 50 projects. Export and remove an old project first.');
+    if(body.useAi && (!aiAvailable(env) || body.aiConsent!==true)) fail(503,'ai_not_available','AI needs an enabled provider and your explicit source-processing consent. You can run the evidence review without AI.');
+    await rate(env,'insights:'+user.id,10,3600);
+    const own=await insightSource(body.url,body.sourceText,'own',env);
+    const competitor=body.competitorUrl?await insightSource(body.competitorUrl,body.competitorText,'competitor',env):undefined;
+    const result:Row=analyzeOffer(own,competitor,context);
+    if(body.useAi) {
+      await rate(env,'ai-user:'+user.id,3,86400);
+      await rate(env,'ai-application',10,86400);
+      try { result.ai=await generateImprovements((env as InsightEnv).AI!,own,competitor,context); }
+      catch(error) { result.aiError=error instanceof HttpError?error.message:'AI could not complete a valid response. The evidence review was saved; no AI rewrite was substituted.'; }
+    }
+    const input={workflow:'url-insights',url:own.url,sourceText:own.text,competitorUrl:competitor?.url||'',competitorText:competitor?.text||'',...context,keywords:context.keywords.join(', '),headline:own.metadata && typeof own.metadata==='object' && 'h1' in own.metadata ? own.metadata.h1 : context.specialty,attested:true};
+    const encoded=inputData(input),name=text(body.name,100)||`${own.platform}: ${context.specialty}`.slice(0,100);
+    const kind=own.platform==='Fiverr'?'gig':['Upwork','LinkedIn'].includes(own.platform)?'profile':'service';
+    return json(await saveInsight(env,user,project,name,kind,encoded,result),201);
+  }
   if (method === 'GET' && path === '/auth/session') return json({ user: { id: user.id, name: user.name, email: user.email, emailVerified: false } });
   if (path === '/account/export' && method === 'GET') {
     sessionOnly(user);
     const projects = await all(env, 'SELECT * FROM projects WHERE user_id=?', user.id);
     const analyses = await all(env, 'SELECT a.* FROM analyses a JOIN projects p ON p.id=a.project_id WHERE p.user_id=?', user.id);
-    return json({ exportedAt: new Date().toISOString(), user: { id: user.id, name: user.name, email: user.email }, projects: projects.map(projectOut), analyses: analyses.map(analysisOut) });
+    const toolRuns = await all(env, 'SELECT id,tool_id,title,result_json,created_at FROM tool_runs WHERE user_id=?', user.id);
+    const toolState = await all(env, 'SELECT tool_id,favorite,last_used_at FROM tool_state WHERE user_id=?', user.id);
+    return json({ exportedAt: new Date().toISOString(), user: { id: user.id, name: user.name, email: user.email }, projects: projects.map(projectOut), analyses: analyses.map(analysisOut), toolRuns: toolRuns.map(analysisOut), toolState });
   }
   if (path === '/account' && method === 'DELETE') {
     sessionOnly(user); const body = await readJson(request);
@@ -163,11 +222,46 @@ async function api(request: Request, env: Env, ctx: ExecutionContext) {
   }
   const keyMatch = path.match(/^\/api-keys\/([\w-]+)$/);
   if (keyMatch && method === 'DELETE') { sessionOnly(user); await statement(env, 'DELETE FROM api_keys WHERE id=? AND user_id=?', keyMatch[1], user.id).run(); return json({ ok: true }); }
+  if (path === '/tool-state' && method === 'GET') return json({ state: await all(env, 'SELECT tool_id,favorite,last_used_at FROM tool_state WHERE user_id=?', user.id) });
+  const stateMatch = path.match(/^\/tool-state\/([\w-]+)$/);
+  if (stateMatch && method === 'PATCH') {
+    if (!findTool(stateMatch[1])) fail(404,'not_found','Tool not found.');
+    const body = await readJson(request);
+    if ((body.favorite !== undefined && typeof body.favorite !== 'boolean') || (body.used !== undefined && body.used !== true) || (body.favorite === undefined && body.used !== true)) fail(400,'invalid_input','Provide a boolean favorite or used: true.');
+    const favorite = body.favorite === undefined ? null : Number(body.favorite);
+    await statement(env, `INSERT INTO tool_state(user_id,tool_id,favorite,last_used_at) VALUES(?,?,COALESCE(?,0),CASE WHEN ?=1 THEN strftime('%Y-%m-%dT%H:%M:%fZ','now') ELSE NULL END)
+      ON CONFLICT(user_id,tool_id) DO UPDATE SET favorite=COALESCE(?,tool_state.favorite),last_used_at=COALESCE(excluded.last_used_at,tool_state.last_used_at)`, user.id,stateMatch[1],favorite,Number(body.used === true),favorite).run();
+    return json({ ok:true });
+  }
+  if (path === '/tool-runs') {
+    if (method === 'GET') return json({ runs: await all(env,'SELECT id,tool_id,title,created_at FROM tool_runs WHERE user_id=? ORDER BY created_at DESC,id DESC LIMIT 100',user.id) });
+    if (method === 'POST') {
+      const body = await readJson(request);
+      if (body.save !== undefined && typeof body.save !== 'boolean') fail(400,'invalid_input','save must be a boolean.');
+      await rate(env,'tool-run:'+user.id,60,3600);
+      const result = runTool(body.toolId,body.input);
+      await statement(env, `INSERT INTO tool_state(user_id,tool_id,last_used_at) VALUES(?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT(user_id,tool_id) DO UPDATE SET last_used_at=excluded.last_used_at`,user.id,result.toolId).run();
+      if (body.save === true) {
+        const saved = await first(env, `INSERT INTO tool_runs(id,user_id,tool_id,title,result_json) SELECT ?,?,?,?,? WHERE (SELECT count(*) FROM tool_runs WHERE user_id=?)<100 RETURNING id,created_at`,crypto.randomUUID(),user.id,result.toolId,result.toolName,JSON.stringify(result),user.id);
+        if (!saved) fail(409,'quota','You can save 100 tool results. Export and remove an old result first.');
+        return json({ result, saved },201);
+      }
+      return json({ result, saved:null });
+    }
+  }
+  const runMatch = path.match(/^\/tool-runs\/([\w-]+)$/);
+  if (runMatch && ['GET','DELETE'].includes(method)) {
+    const row = await first(env,'SELECT id,tool_id,title,result_json,created_at FROM tool_runs WHERE id=? AND user_id=?',runMatch[1],user.id);
+    if (!row) fail(404,'not_found','Tool result not found.');
+    if (method === 'DELETE') { await statement(env,'DELETE FROM tool_runs WHERE id=? AND user_id=?',runMatch[1],user.id).run(); return json({ok:true}); }
+    return json({ run:analysisOut(row!) });
+  }
   if (method === 'GET' && ['/projects','/dashboard','/search'].includes(path)) {
     const query = text(url.searchParams.get('q'), 100);
     const projects = await all(env, `SELECT p.*, (SELECT score FROM analyses WHERE project_id=p.id ORDER BY created_at DESC,id DESC LIMIT 1) AS latest_score,
       (SELECT count(*) FROM analyses WHERE project_id=p.id) AS review_count FROM projects p WHERE user_id=? AND instr(lower(name),lower(?))>0 ORDER BY updated_at DESC`, user.id, query);
-    return json({ projects: projects.map(projectOut), counts: { projects: projects.length, reviews: projects.reduce((sum, p) => sum + Number(p.review_count), 0) } });
+    const extra = path === '/search' ? { tools:toolCatalog.filter(t=>(t.name+' '+t.category+' '+t.subcategory+' '+t.summary).toLowerCase().includes(query.toLowerCase())), toolRuns:await all(env,'SELECT id,tool_id,title,created_at FROM tool_runs WHERE user_id=? AND instr(lower(title),lower(?))>0 ORDER BY created_at DESC LIMIT 100',user.id,query) } : {};
+    return json({ projects: projects.map(projectOut), ...extra, counts: { projects: projects.length, reviews: projects.reduce((sum, p) => sum + Number(p.review_count), 0) } });
   }
   if (path === '/projects' && method === 'POST') {
     const body = await readJson(request), name = text(body.name, 100), kind = text(body.kind, 20);
@@ -242,12 +336,12 @@ export default {
       if (url.pathname.startsWith('/api/')) response = await api(request, env, ctx);
       else if (!['GET','HEAD'].includes(request.method)) response = new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } });
       else if (url.pathname === '/robots.txt') response = new Response(env.ENVIRONMENT === 'production' ? `User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${env.PUBLIC_ORIGIN}/sitemap.xml\n` : 'User-agent: *\nDisallow: /\n');
-      else if (url.pathname === '/sitemap.xml') response = new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${env.PUBLIC_ORIGIN}/</loc></url></urlset>`, { headers: { 'Content-Type': 'application/xml' } });
+      else if (url.pathname === '/sitemap.xml') response = new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${env.PUBLIC_ORIGIN}/</loc></url><url><loc>${env.PUBLIC_ORIGIN}/toolkit.html</loc></url></urlset>`, { headers: { 'Content-Type': 'application/xml' } });
       else {
         const asset = assets[url.pathname === '/' ? '/index.html' : url.pathname];
         if (asset) {
           let body = asset.content;
-          if (url.pathname === '/' || url.pathname === '/index.html') body = body.replaceAll('https://elancebot.com', env.PUBLIC_ORIGIN);
+          if (asset.type.startsWith('text/html')) body = body.replaceAll('https://elancebot.com', env.PUBLIC_ORIGIN);
           response = new Response(request.method === 'HEAD' ? null : body, { headers: { 'Content-Type': asset.type, 'Cache-Control': asset.type.startsWith('text/html') ? 'no-cache' : 'public, max-age=300' } });
         } else response = new Response('Page not found', { status: 404 });
       }

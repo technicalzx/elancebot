@@ -19,3 +19,7 @@ Accepted with a production gate. Scrypt, hashed tokens and offline recovery make
 ## ADR-005 — Embedded static assets
 
 Accepted for the small app: reproducible module deployed through the connected API or Wrangler. Alternative: separate Static Assets upload. Move larger media to native assets/R2 when cache/size needs justify it. User uploads are outside this path.
+
+## ADR-006 — No end-user provider keys, not unrestricted website access
+
+Accepted product constraint on 2026-10-14: users should submit URLs without obtaining third-party API keys. Elancebot's own workspace authentication and internal service protection remain. Open-source code does not grant access to login-only or blocked websites. See [public-source acquisition design](../public-source-acquisition.md) for researched options, required controls and current implementation boundaries.

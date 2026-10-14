@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
+import { digest } from '../src/lib/security.mjs';
 
 test('real Worker + D1 lifecycle, ownership, scopes, recovery, CSRF and deletion', async () => {
   const mf = new Miniflare(convertV4MiniflareOptions({ name:'elancebot-test', modules:true, scriptPath:'dist/worker.js', compatibilityDate:'2026-10-13', compatibilityFlags:['nodejs_compat'], d1Databases:['DB'], bindings:{ENVIRONMENT:'preview',PUBLIC_ORIGIN:'https://local.test',URL_ALLOWED_HOSTS:'example.org,local.test'}, outboundService: async request => {
@@ -13,7 +14,7 @@ test('real Worker + D1 lifecycle, ownership, scopes, recovery, CSRF and deletion
   } }));
   try {
     const db = await mf.getD1Database('DB');
-    for(const sql of (await readFile('migrations/0001_initial.sql','utf8')).split(';').map(v=>v.trim()).filter(Boolean)) await db.prepare(sql).run();
+    for(const migration of (await readdir('migrations')).filter(n=>n.endsWith('.sql')).sort()) for(const sql of (await readFile('migrations/'+migration,'utf8')).split(';').map(v=>v.trim()).filter(Boolean)) await db.prepare(sql).run();
     async function request(path, { method='GET', body, cookie='', key='', origin='https://local.test' } = {}) {
       const response = await mf.dispatchFetch('https://local.test' + path,{method,headers:{ ...(body === undefined ? {} : {'content-type':'application/json'}), ...(cookie ? {cookie} : {}), ...(key ? {authorization:'Bearer '+key} : {}), origin }, ...(body === undefined ? {} : {body:JSON.stringify(body)})});
       const result = await response.json().catch(()=>({})); return {response,result,status:response.status,cookie:response.headers.get('set-cookie')?.split(';')[0]};
@@ -40,6 +41,38 @@ test('real Worker + D1 lifecycle, ownership, scopes, recovery, CSRF and deletion
     assert.equal((await request('/api/v1/api-keys',{key})).status,403);
     const writeKey = await request('/api/v1/api-keys',{...session,method:'POST',body:{name:'test write',scope:'write'}});
     assert.equal((await request('/api/v1/projects/'+id+'/analyses',{key:writeKey.result.secret,method:'POST'})).status,201);
+    const catalog=await request('/api/v1/tools'); assert.equal(catalog.result.catalog.length,12);
+    const run=await request('/api/v1/tool-runs',{...session,method:'POST',body:{toolId:'percentage',input:{part:18,whole:24},save:true}});
+    assert.equal(run.status,201,JSON.stringify(run.result)); assert.equal(run.result.result.values[0].value,75); const runId=run.result.saved.id;
+    assert.equal((await request('/api/v1/tool-runs/'+runId,{cookie:b.cookie})).status,404);
+    assert.equal((await request('/api/v1/tool-runs/'+runId,{cookie:b.cookie,method:'DELETE'})).status,404);
+    assert.equal((await request('/api/v1/tool-runs',{key,method:'POST',body:{}})).status,403);
+    assert.equal((await request('/api/v1/tool-runs',{...session,method:'POST',body:{toolId:'percentage',input:{part:1,whole:0},save:true}})).status,400);
+    assert.equal((await request('/api/v1/tool-state/percentage',{key,method:'PATCH',body:{favorite:true}})).status,403);
+    assert.equal((await request('/api/v1/tool-state/percentage',{...session,method:'PATCH',body:{favorite:true}})).status,200);
+    assert.equal((await request('/api/v1/tool-state/unknown',{...session,method:'PATCH',body:{favorite:true}})).status,404);
+    assert.equal((await request('/api/v1/tool-state/percentage',{...session,method:'PATCH',body:{favorite:'true'}})).status,400);
+    assert.equal((await request('/api/v1/tool-state',{cookie:b.cookie})).result.state.length,0);
+    assert.equal((await request('/api/v1/tool-state',session)).result.state[0].favorite,1);
+    assert.equal((await request('/api/v1/search?q=percentage',session)).result.toolRuns.length,1);
+    assert.equal((await request('/api/v1/search?q=percentage',{cookie:b.cookie})).result.toolRuns.length,0);
+    const transient=await request('/api/v1/tool-runs',{...session,method:'POST',body:{toolId:'percentage',input:{part:1,whole:2}}});assert.equal(transient.status,200);assert.equal(transient.result.saved,null);
+    assert.equal((await request('/api/v1/tool-runs',session)).result.runs.length,1);
+    const temporary=await request('/api/v1/tool-runs',{key:writeKey.result.secret,method:'POST',body:{toolId:'profit-margin',input:{revenue:1000,cost:600},save:true}});assert.equal(temporary.status,201);
+    assert.equal((await request('/api/v1/tool-runs/'+temporary.result.saved.id,{key,method:'DELETE'})).status,403);
+    assert.equal((await request('/api/v1/tool-runs/'+temporary.result.saved.id,{key:writeKey.result.secret,method:'DELETE'})).status,200);
+    assert.equal((await request('/api/v1/tool-runs/'+temporary.result.saved.id,session)).status,404);
+    // Fill the isolated test DB directly: prove the record cap without live load testing.
+    await db.batch(Array.from({length:99},(_,i)=>db.prepare('INSERT INTO tool_runs(id,user_id,tool_id,title,result_json) VALUES(?,?,?,?,?)').bind('quota-fixture-'+i,a.result.user.id,'percentage','quota fixture','{}')));
+    assert.equal((await request('/api/v1/tool-runs',{...session,method:'POST',body:{toolId:'percentage',input:{part:1,whole:2},save:true}})).status,409);
+    assert.equal((await request('/api/v1/tool-runs',{...session,method:'POST',body:{toolId:'percentage',input:{part:1,whole:2},save:false}})).status,200);
+    await db.prepare("DELETE FROM tool_runs WHERE id LIKE 'quota-fixture-%'").run();
+    assert.equal((await request('/api/v1/tool-runs',{...session,method:'POST',origin:'https://evil.test',body:{}})).status,403);
+    const oversized=await request('/api/v1/tool-runs',{...session,method:'POST',body:{toolId:'text-tools',input:{text:'x'.repeat(49000)}}});assert.equal(oversized.status,413);
+    const rateBucket=await digest('tool-run:'+a.result.user.id+':'+Math.floor(Date.now()/1000/3600));
+    await db.prepare('INSERT INTO rate_limits(bucket,hits,expires_at) VALUES(?,60,?) ON CONFLICT(bucket) DO UPDATE SET hits=60').bind(rateBucket,Math.floor(Date.now()/1000)+3600).run();
+    assert.equal((await request('/api/v1/tool-runs',{...session,method:'POST',body:{toolId:'percentage',input:{part:1,whole:2}}})).status,429);
+    assert.equal((await request('/api/v2/health')).status,404);
     assert.equal((await request('/api/v1/url/analyze',{...session,method:'POST',body:{url:'https://127.0.0.1',attested:true}})).status,400);
     assert.equal((await request('/api/v1/url/analyze',{...session,method:'POST',body:{url:'https://unapproved.example',attested:true}})).status,403);
     const urlReview = await request('/api/v1/url/analyze',{...session,method:'POST',body:{url:'https://example.org/',attested:true}});
@@ -49,7 +82,7 @@ test('real Worker + D1 lifecycle, ownership, scopes, recovery, CSRF and deletion
     const selfReview = await request('/api/v1/url/analyze',{...session,method:'POST',body:{url:'https://local.test/',attested:true}}); assert.equal(selfReview.result.result.retrieval,'local-rendered-html');
     assert.equal((await request('/api/v1/api-keys/'+writeKey.result.key.id,{...session,method:'DELETE'})).status,200);
     assert.equal((await request('/api/v1/projects',{key:writeKey.result.secret})).status,401);
-    const exported = await request('/api/v1/account/export',session); assert.equal(exported.status,200); assert.equal(exported.result.projects.length,1); assert.ok(!JSON.stringify(exported.result).includes('password_hash'));
+    const exported = await request('/api/v1/account/export',session); assert.equal(exported.status,200); assert.equal(exported.result.projects.length,1); assert.equal(exported.result.toolRuns.length,1); assert.equal(exported.result.toolState[0].favorite,1); assert.ok(!JSON.stringify(exported.result).includes('password_hash'));
     const recovery = await request('/api/v1/auth/recover',{method:'POST',body:{email:'alice@example.test',password:password+'new',recoveryCode:a.result.recoveryCode}});
     assert.equal(recovery.status,200,JSON.stringify(recovery.result)); assert.equal((await request('/api/v1/projects',session)).status,401); assert.equal((await request('/api/v1/projects',{key})).status,401);
     assert.equal((await request('/api/v1/auth/recover',{method:'POST',body:{email:'alice@example.test',password,recoveryCode:a.result.recoveryCode}})).status,401);
@@ -57,10 +90,13 @@ test('real Worker + D1 lifecycle, ownership, scopes, recovery, CSRF and deletion
     assert.equal(await db.prepare('SELECT count(*) AS n FROM projects').first('n'),0);
     assert.equal(await db.prepare('SELECT count(*) AS n FROM analyses').first('n'),0);
     assert.equal(await db.prepare('SELECT count(*) AS n FROM api_keys').first('n'),0);
+    assert.equal(await db.prepare('SELECT count(*) AS n FROM tool_runs').first('n'),0);
+    assert.equal(await db.prepare('SELECT count(*) AS n FROM tool_state').first('n'),0);
     assert.equal((await request('/api/v1/auth/session',{cookie:recovery.cookie})).status,401);
     const home = await mf.dispatchFetch('https://local.test/'); assert.equal(home.status,200); assert.match(home.headers.get('content-security-policy'),/frame-ancestors 'none'/); assert.equal(home.headers.get('x-robots-tag'),'noindex, nofollow');
     assert.equal(home.headers.get('cache-control'),'no-cache'); assert.match(await home.text(),/styles\.css\?v=[a-f0-9]{12}/);
     const missing = await mf.dispatchFetch('https://local.test/unknown'); assert.equal(missing.status,404);
     const open = await request('/api/v1/openapi'); assert.equal(open.result.openapi,'3.1.0'); assert.ok(open.result.paths['/projects/{id}']);
+    assert.ok(open.result.paths['/tool-runs'].post.responses['200']);assert.ok(open.result.paths['/tool-runs'].post.responses['201']);
   } finally { await mf.dispose(); }
 });

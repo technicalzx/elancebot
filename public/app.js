@@ -4,6 +4,7 @@ const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
 const date = value => new Date(typeof value === 'number' ? value * 1000 : value).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
 let user = null, capabilities = {}, currentProject = null, currentAnalyses = [], routeVersion = 0, previousFocus;
+let currentToolResult = null;
 async function api(path, method = 'GET', data) {
   const response = await fetch('/api/v1' + path, { method, credentials:'same-origin', headers: data === undefined ? {} : { 'Content-Type':'application/json' }, ...(data === undefined ? {} : { body:JSON.stringify(data) }) });
   const result = await response.json().catch(() => ({}));
@@ -28,7 +29,7 @@ function sidebar(open) {
   else if (wasOpen) $('.mobile-menu').focus({ preventScroll:true });
 }
 function header(title, subtitle, actions = '') { return `<div class="app-page-header"><div><p class="eyebrow">YOUR WORKSPACE</p><h1 tabindex="-1">${escape(title)}</h1><p>${escape(subtitle)}</p></div><div class="header-actions-app">${actions}</div></div>`; }
-const newButton = '<a class="button button-primary" href="#app/new">+ New review</a>';
+const newButton = '<a class="button button-primary" href="#app/insights">+ Start URL review</a>';
 function field(name, label, value = '', options = {}) {
   const id = 'field-' + name;
   const attrs = `id="${id}" name="${name}" ${options.required ? 'required' : ''} ${options.max ? `maxlength="${options.max}"` : ''}`;
@@ -81,8 +82,8 @@ function inputFields(input = {}, prefix = '') {
     ['services','skills','keywords','portfolio','testimonials'].map(k => field(prefix+k,({services:'Services & deliverables',skills:'Skills / tags',keywords:'Target keywords',portfolio:'Work samples / case studies',testimonials:'Testimonials (with permission)'})[k],value(k),{ area:true,rows:3,max:3000,help:'One per line or separated by commas.' })).join('') +
     field(prefix + 'location','Market / location',value('location'),{ max:140 }) + field(prefix + 'profileUrl','Reference URL (not fetched)',value('profileUrl'),{ max:500,type:'url',full:true });
 }
-function formPage(project) {
-  const p = project || { kind:'profile', input:{} }, input = p.input;
+function formPage(project, kind='profile') {
+  const p = project || { kind:['profile','gig','service','competitor','website'].includes(kind) ? kind : 'profile', input:{} }, input = p.input;
   return header(project ? 'Refine your draft' : 'What are you working on?', 'A few honest details are more useful than a perfect-sounding claim.') + `<div class="form-layout"><form class="card form-card" id="review-form" data-id="${p.id || ''}"><div class="form-grid">${field('name','Project name',p.name || '',{required:true,max:100,full:true})}<div class="form-field full"><label for="review-kind">Review type</label><select name="kind" id="review-kind" ${p.id ? 'disabled' : ''}>${['profile','gig','service','competitor','website'].map(k => `<option value="${k}" ${k === p.kind ? 'selected' : ''}>${({ profile:'Profile review',gig:'Gig review',service:'Service page review',competitor:'Competitor comparison',website:'Website metadata review' })[k]}</option>`).join('')}</select></div></div>
     <fieldset id="content-fields" ${p.kind === 'website' ? 'hidden disabled' : ''}><legend>Your content</legend><div class="form-grid">${inputFields(input)}</div></fieldset>
     <fieldset id="competitor-fields" ${p.kind !== 'competitor' ? 'hidden disabled' : ''}><legend>Competitor snapshot</legend><p>Paste only public or authorized information. We do not scrape, verify, or fetch competitor accounts. Supply comparable detail on both sides.</p><div class="form-grid">${inputFields(input.competitor, 'competitor_')}</div></fieldset>
@@ -92,6 +93,7 @@ function formPage(project) {
 }
 function resultHtml(analysis, previous) {
   const r = analysis.result;
+  if(r.analysisType==='url-insights') return insightResultHtml(analysis,previous);
   const diff = previous ? analysis.score - previous.score : null;
   return `<div class="results-layout"><div><section class="card score-hero"><div class="score-number"><strong>${r.score}</strong><span>/ 100</span></div><div class="score-hero-copy"><p class="eyebrow">CONTENT CHECKLIST</p><h2>${escape(r.band)}</h2><p>${diff === null ? 'Your first baseline. Improve the draft, then review again.' : `${diff >= 0 ? '+' : ''}${diff} points versus the preceding review. This is not a marketplace ranking.`}</p></div></section>
     <section class="card analysis-section"><h2>Where the score comes from</h2><div class="score-breakdown">${r.criteria.map(c => `<div><div class="breakdown-row"><span>${escape(c.label)}</span><meter min="0" max="${c.maxScore}" value="${c.score}" aria-label="${escape(c.label)}">${c.score}/${c.maxScore}</meter><b>${c.score}/${c.maxScore}</b></div><details><summary>View evidence</summary><ul>${c.evidence.map(e => `<li>${escape(e)}</li>`).join('')}</ul></details></div>`).join('')}</div></section>
@@ -101,7 +103,7 @@ function resultHtml(analysis, previous) {
 }
 async function projectPage(id) {
   const data = await api('/projects/' + encodeURIComponent(id)); currentProject = data.project; currentAnalyses = data.analyses;
-  return header(currentProject.name, 'A private record of the work, the evidence, and your improvements.', `<a class="button button-primary" href="#app/edit/${id}">Improve draft</a><button class="button button-secondary" data-action="export-project">Export JSON</button><button class="button button-danger" data-action="delete-project">Delete</button>`) +
+  return header(currentProject.name, 'A private record of the work, the evidence, and your improvements.', `<a class="button button-primary" href="#app/${currentProject.input.workflow==='url-insights'?'improve':'edit'}/${id}">Improve draft</a><button class="button button-secondary" data-action="export-project">Export JSON</button><button class="button button-danger" data-action="delete-project">Delete</button>`) +
     (data.analyses.length ? `<div class="projects-toolbar"><label for="revision-select">Review history</label><select id="revision-select">${data.analyses.map((a,i) => `<option value="${i}">Review ${data.analyses.length-i} · ${date(a.created_at)} · ${a.score}/100</option>`).join('')}</select></div><div id="result-container">${resultHtml(data.analyses[0],data.analyses[1])}</div>` : '<div class="card empty-state"><h2>Your draft is saved.</h2><p>No review has completed yet. Check the inputs and try again.</p><button class="button button-primary" data-action="run-review">Run review</button></div>');
 }
 function ownershipPage() {
@@ -115,21 +117,77 @@ async function keysPage() {
 function settingsPage() {
   return header('Your account, in your control.', 'Export your workspace or remove it when you are done.') + `<div class="settings-layout"><section class="card analysis-section"><h2>${escape(user.name)}</h2><p>${escape(user.email)}</p><p class="status-badge pending">Email not verified · preview account</p><p>No email provider or MFA is connected. Keep your offline recovery code. Do not use this preview for sensitive client data.</p><button class="button button-secondary" data-action="export-account">Download all my data</button><p><a href="/privacy.html" target="_blank" rel="noopener">Privacy and retention notice ↗</a></p></section><form id="delete-account-form" class="card form-card"><h2>Delete account</h2><p>This permanently removes your account, projects, reviews and active keys from the live database. Export first. Provider backups may persist for their retention window.</p><div class="form-grid">${field('password','Current password','',{required:true,type:'password',full:true,max:128})}${field('confirm','Type DELETE to confirm','',{required:true,full:true,max:6})}</div><div class="form-actions"><button class="button button-danger" type="submit">Permanently delete account</button></div><p class="field-error" role="alert" hidden></p></form></div>`;
 }
+const toolLink = t => '#app/' + (t.mode === 'review' ? 'new/' : 'tool/') + encodeURIComponent(t.id);
+function toolCard(t, state={}) {
+  return `<article class="card project-card tool-card" data-category="${escape(t.category)}" data-search="${escape((t.name+' '+t.summary+' '+t.subcategory).toLowerCase())}" data-favorite="${state.favorite ? 'true' : 'false'}" data-recent="${state.last_used_at ? 'true' : 'false'}"><div class="project-card-meta"><span class="type-badge">${escape(t.category)} / ${escape(t.subcategory)}</span><button class="button button-secondary favorite-button" data-favorite-id="${t.id}" aria-label="Favorite ${escape(t.name)}" aria-pressed="${Boolean(state.favorite)}">${state.favorite ? '★' : '☆'}</button></div><h2><a href="${toolLink(t)}">${escape(t.name)}</a></h2><p>${escape(t.summary)}</p><div class="project-card-bottom"><span>${state.last_used_at ? 'Last opened '+date(state.last_used_at) : 'Working tool'}</span><a href="${toolLink(t)}">Open tool →</a></div></article>`;
+}
+async function toolsPage() {
+  const {state}=await api('/tool-state'), byId=Object.fromEntries(state.map(s=>[s.tool_id,s]));
+  const catalog=[...(capabilities.catalog || [])].sort((a,b)=>(byId[b.id]?.last_used_at||'').localeCompare(byId[a.id]?.last_used_at||''));
+  return header('A toolkit for your next step','Working reviews, calculators and utilities. Your favorites and recently opened tools stay with your account.')+`<div class="card tool-filters"><label>Search tools<input id="tool-search" type="search" placeholder="Pricing, GPA, text…"></label><label>Category<select id="tool-category"><option value="">All categories</option>${[...new Set(catalog.map(t=>t.category))].map(c=>`<option>${escape(c)}</option>`).join('')}</select></label><label>Show<select id="tool-filter"><option value="all">All tools</option><option value="favorites">Favorites</option><option value="recent">Recently opened</option></select></label></div><p id="tool-count" role="status">${catalog.length} tools available</p><div class="projects-grid">${catalog.map(t=>toolCard(t,byId[t.id])).join('')}</div><p id="tools-empty" hidden>No tools match. Try another search or add a favorite.</p><section class="card analysis-section workspace-note"><h2>A growing professional platform</h2><p>Dedicated platform workflows, career tools, content studio, AI, live integrations and file utilities remain in development. Only working tools appear above.</p><a href="https://github.com/ycgiio/elancebot/blob/main/docs/requirements-traceability.md" target="_blank" rel="noopener">See the full requirement map ↗</a></section>`;
+}
+function filterTools() {
+  const q=$('#tool-search')?.value.toLowerCase() || '', category=$('#tool-category')?.value, mode=$('#tool-filter')?.value;
+  let count=0;
+  $$('.tool-card').forEach(card=>{card.hidden=!(card.dataset.search.includes(q) && (!category || card.dataset.category===category) && (mode!=='favorites' || card.dataset.favorite==='true') && (mode!=='recent' || card.dataset.recent==='true')); if(!card.hidden) count++;});
+  if($('#tool-count')) $('#tool-count').textContent=`${count} tool${count===1?'':'s'} shown`;
+  if($('#tools-empty')) $('#tools-empty').hidden=count>0;
+}
+function utilityResult(data) {
+  const r=data.result;
+  const inputs = `<details><summary>Inputs used for this result</summary><pre>${escape(JSON.stringify(r.input,null,2))}</pre></details>`;
+  return `<section class="card analysis-section">
+    <h2 tabindex="-1">${escape(r.toolName)} result</h2>
+    <p>Calculated from your inputs · rules ${escape(r.version)} · ${data.saved ? 'Saved to your private history' : 'Not saved to history'}</p>
+    <dl class="tool-values">${r.values.map(v=>`<div><dt>${escape(v.label)}</dt><dd>${escape(v.value)}${v.unit?' '+escape(v.unit):''}</dd></div>`).join('')}</dl>
+    ${inputs}
+    <h3>How this was calculated</h3><ul>${r.explanations.map(t=>`<li>${escape(t)}</li>`).join('')}</ul>
+    <h3>Next steps</h3><ul>${r.recommendations.map(t=>`<li>${escape(t)}</li>`).join('')}</ul>
+    <h3>Assumptions and limitations</h3><ul>${r.limitations.map(t=>`<li>${escape(t)}</li>`).join('')}</ul>
+    <div class="form-actions"><button class="button button-secondary" data-action="copy-tool">Copy result</button><button class="button button-secondary" data-action="export-tool">Download JSON</button>${data.saved ? '<a class="button button-secondary" href="#app/tool-history">Saved history</a>' : ''}</div>
+  </section>`;
+}
+async function toolPage(id) {
+  const t=capabilities.catalog?.find(t=>t.id===id && t.mode!=='review');
+  if(!t) return header('Tool not found','Choose a working tool from the directory.');
+  await api('/tool-state/'+encodeURIComponent(id),'PATCH',{used:true});
+  const fields=t.fields.map(f=>`<div class="form-field full"><label for="utility-${f.key}">${escape(f.label)}</label>${f.type==='select'?`<select id="utility-${f.key}" name="${f.key}">${f.options.map(o=>`<option value="${escape(o.value)}" ${o.value===f.value?'selected':''}>${escape(o.label)}</option>`).join('')}</select>`:f.type==='textarea'?`<textarea id="utility-${f.key}" name="${f.key}" rows="6" maxlength="${f.maxLength}" required>${escape(f.value)}</textarea>`:`<input id="utility-${f.key}" name="${f.key}" type="number" step="any" min="${f.min}" max="${f.max}" value="${f.value}" required>`}</div>`).join('');
+  return header(t.name,t.summary, '<a class="button button-secondary" href="#app/tools">All tools</a>')+`<div class="form-layout"><form id="tool-form" data-tool="${t.id}" class="card form-card"><div class="form-grid">${fields}</div><div class="form-check"><input type="checkbox" id="save-tool-run" name="save" checked><label for="save-tool-run">Save inputs and result in my private history</label></div><p class="field-helper">Uncheck to calculate without retaining this result. Recently opened tool names are still recorded. All processing uses deterministic rules, not AI.</p><p class="field-error" role="alert" hidden></p><div class="form-actions"><button class="button button-primary" type="submit">Run tool</button><button class="button button-secondary" type="reset">Reset</button></div></form><div id="tool-result" aria-live="polite"><section class="card analysis-section"><h2>Your assumptions matter</h2><p>Check units and input values. Your result includes the calculation method and its limitations. Never paste credentials or sensitive client content into this preview.</p></section></div></div>`;
+}
+async function toolHistoryPage() {
+  const {runs}=await api('/tool-runs');
+  return header('Saved tool results','Reopen, copy, export or remove your private calculations and utility results.','<a class="button button-primary" href="#app/tools">Explore tools</a>')+`<div class="projects-grid">${runs.map(r=>`<article class="card project-card"><p>${date(r.created_at)}</p><h2><a href="#app/run/${r.id}">${escape(r.title)}</a></h2><p>Saved inputs and versioned result</p></article>`).join('') || '<p>No tool results yet. Save a result when you run a tool.</p>'}</div>`;
+}
+async function savedRunPage(id) {
+  const {run}=await api('/tool-runs/'+encodeURIComponent(id)); currentToolResult={result:run.result,saved:{id:run.id,created_at:run.created_at}};
+  return header(run.title,'Saved '+date(run.created_at),`<a class="button button-secondary" href="#app/tool/${encodeURIComponent(run.tool_id)}">New calculation</a><button class="button button-danger" data-action="delete-tool-run">Delete saved result</button>`)+utilityResult(currentToolResult);
+}
+function searchPage() {
+  return header('Search your workspace','Find working tools, project names and saved tool results. Only your private records are searched.')+'<form id="workspace-search-form" class="card tool-filters"><label>Search terms<input name="query" type="search" maxlength="100" required></label><button class="button button-primary" type="submit">Search</button><p class="field-error" role="alert" hidden></p></form><div id="workspace-search-results" aria-live="polite"></div>';
+}
 async function route() {
   const version = ++routeVersion, isApp = location.hash.startsWith('#app/');
+  currentToolResult=null;
   sidebar(false);
   $('#marketing-view').hidden = isApp; $('#site-header').hidden = isApp; $('#site-footer').hidden = isApp; $('#app-view').hidden = !isApp;
   if (!isApp) { document.title = 'Elancebot — clearer service-page reviews'; return; }
   if (!user) { openAuth('login'); return; }
   $('#sidebar-user-name').textContent = user.name; $('#sidebar-user-email').textContent = user.email; $('#sidebar-avatar').textContent = user.name[0].toUpperCase();
   const [page,id] = location.hash.slice(5).split('/');
-  $('#app-crumb').textContent = ({dashboard:'Overview',new:'New review',projects:'Saved projects',project:'Review results',edit:'Improve draft',ownership:'URL ownership',keys:'API access',settings:'Account settings'})[page] || 'Workspace';
+  $('#app-crumb').textContent = ({dashboard:'Overview',insights:'URL insights',improve:'Improve offer draft',tools:'Tool directory',tool:'Tool workspace','tool-history':'Tool history',run:'Saved result',search:'Workspace search',new:'New review',projects:'Saved projects',project:'Review results',edit:'Improve draft',ownership:'URL ownership',keys:'API access',settings:'Account settings'})[page] || 'Workspace';
   $$('.app-nav a').forEach(a => { const active = a.dataset.appRoute === page; a.classList.toggle('active',active); if(active) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
   $('#app-page').innerHTML = '<div class="loading-state" role="status"><span class="spinner"></span>Loading your workspace…</div>';
   try {
     let html;
     if (page === 'dashboard' || page === 'projects') html = await listPage(page);
-    else if (page === 'new') html = formPage();
+    else if(page === 'insights') html = insightForm();
+    else if(page === 'improve') { const {project}=await api('/projects/'+encodeURIComponent(id)); html=insightForm(project); }
+    else if (page === 'new') { if(capabilities.catalog?.some(t=>t.id===id && t.mode==='review')) await api('/tool-state/'+encodeURIComponent(id),'PATCH',{used:true}); html = formPage(undefined,id); }
+    else if (page === 'tools') html = await toolsPage();
+    else if (page === 'tool') html = await toolPage(id);
+    else if (page === 'tool-history') html = await toolHistoryPage();
+    else if (page === 'run') html = await savedRunPage(id);
+    else if (page === 'search') html = searchPage();
     else if (page === 'edit') { const { project } = await api('/projects/' + encodeURIComponent(id)); html = formPage(project); }
     else if (page === 'project') html = await projectPage(id);
     else if (page === 'ownership') html = ownershipPage();
@@ -146,7 +204,7 @@ async function route() {
   }
 }
 document.addEventListener('submit', async event => {
-  const form = event.target; if (!['auth-form','review-form','key-form','delete-account-form'].includes(form.id)) return;
+  const form = event.target; if (!['auth-form','review-form','key-form','delete-account-form','tool-form','workspace-search-form','insight-form'].includes(form.id)) return;
   event.preventDefault(); const button = $('button[type="submit"]',form), oldLabel = button.textContent; button.disabled = true; button.textContent = 'Working…';
   const formError = $('.auth-error,.field-error',form); if (formError) formError.hidden = true;
   try {
@@ -155,6 +213,10 @@ document.addEventListener('submit', async event => {
       const result = await api('/auth/' + ({signup:'register',login:'login',recover:'recover'})[form.dataset.mode], 'POST', values);
       user = result.user;
       if (result.recoveryCode) showRecovery(result.recoveryCode); else { closeAuth(); go('dashboard'); }
+    } else if(form.id === 'insight-form') {
+      const data=await api('/insights','POST',{...values,projectId:form.dataset.id||undefined,attested:values.attested==='on',useAi:values.useAi==='on',aiConsent:values.useAi==='on'});
+      toast(data.analysis.result.aiError?'Source review saved. AI could not produce a validated draft.':'Evidence review saved. Inspect the sources and next steps.');
+      go('project/'+data.project.id);
     } else if (form.id === 'review-form') {
       const kind = $('#review-kind').value, input = {};
       if (kind === 'website') { input.url = values.url; input.attested = values.attested === 'on'; }
@@ -167,6 +229,12 @@ document.addEventListener('submit', async event => {
       try { await api('/projects/' + result.project.id + '/analyses','POST'); toast('Review saved. Your next improvements are ready.'); }
       catch(error) { toast('Draft saved. ' + error.message,true); }
       go('project/' + result.project.id);
+    } else if (form.id === 'tool-form') {
+      const data=await api('/tool-runs','POST',{toolId:form.dataset.tool,input:values,save:values.save==='on'});
+      if(form.isConnected) { currentToolResult=data; $('#tool-result').innerHTML=utilityResult(data); $('#tool-result h2').focus({preventScroll:true}); toast(data.saved?'Result saved.':'Calculation complete. Result not saved.'); }
+    } else if (form.id === 'workspace-search-form') {
+      const results=await api('/search?q='+encodeURIComponent(values.query));
+      if(form.isConnected) $('#workspace-search-results').innerHTML=`<section class="card analysis-section"><h2>Tools (${results.tools.length})</h2><ul>${results.tools.map(t=>`<li><a href="${toolLink(t)}">${escape(t.name)}</a></li>`).join('') || '<li>No matching tools</li>'}</ul><h2>Projects (${results.projects.length})</h2><ul>${results.projects.map(p=>`<li><a href="#app/project/${p.id}">${escape(p.name)}</a></li>`).join('') || '<li>No matching projects</li>'}</ul><h2>Saved tool results (${results.toolRuns.length})</h2><ul>${results.toolRuns.map(r=>`<li><a href="#app/run/${r.id}">${escape(r.title)} · ${date(r.created_at)}</a></li>`).join('') || '<li>No matching results</li>'}</ul></section>`;
     } else if (form.id === 'key-form') {
       const result = await api('/api-keys','POST',values);
       await route();
@@ -187,23 +255,30 @@ document.addEventListener('click', async event => {
   if(el.matches('.sidebar-close,.app-backdrop')) { sidebar(false); return; }
   if(el.matches('.sidebar-user')) { go('settings'); return; }
   try {
+    if(el.dataset.favoriteId) { el.disabled=true; const favorite=el.getAttribute('aria-pressed')!=='true'; await api('/tool-state/'+encodeURIComponent(el.dataset.favoriteId),'PATCH',{favorite}); el.setAttribute('aria-pressed',String(favorite)); el.textContent=favorite?'★':'☆'; el.closest('.tool-card').dataset.favorite=String(favorite); el.disabled=false; filterTools(); }
     if(el.id === 'signout-button') { await api('/auth/logout','POST'); user = null; currentProject = null; currentAnalyses = []; $('#app-page').replaceChildren(); location.hash = ''; toast('Signed out.'); }
     if(el.dataset.key) { await api('/api-keys/' + el.dataset.key,'DELETE'); toast('Key revoked.'); await route(); }
     const action = el.dataset.action;
     if(action === 'retry') route();
     if(action === 'export-project') download('elancebot-project.json',{project:currentProject,analyses:currentAnalyses});
     if(action === 'export-account') download('elancebot-workspace.json',await api('/account/export'));
+    if(action === 'export-tool' && currentToolResult) download('elancebot-tool-result.json',currentToolResult);
+    if(action === 'copy-tool' && currentToolResult) { await navigator.clipboard.writeText(JSON.stringify(currentToolResult.result,null,2)); toast('Result copied.'); }
+    if(action === 'delete-tool-run' && currentToolResult?.saved && confirm('Permanently delete this saved tool result? Export it first if needed.')) { await api('/tool-runs/'+currentToolResult.saved.id,'DELETE'); go('tool-history'); toast('Saved result removed.'); }
     if(action === 'delete-project' && confirm('Permanently delete this project and its reviews? Export it first if you need a copy.')) { await api('/projects/' + currentProject.id,'DELETE'); go('projects'); toast('Project deleted.'); }
     if(action === 'run-review') { el.disabled = true; await api('/projects/' + currentProject.id + '/analyses','POST'); await route(); }
   } catch(error) { toast(error.message,true); if(el.isConnected) el.disabled = false; }
 });
 document.addEventListener('change', event => {
+  if(['tool-category','tool-filter'].includes(event.target.id)) filterTools();
   if(event.target.id === 'review-kind') { const kind = event.target.value; for(const [id,visible] of [['content-fields',kind !== 'website'],['competitor-fields',kind === 'competitor'],['website-fields',kind === 'website']]) { $('#'+id).hidden = !visible; $('#'+id).disabled = !visible; } }
   if(event.target.id === 'revision-select') { const i = Number(event.target.value); $('#result-container').innerHTML = resultHtml(currentAnalyses[i],currentAnalyses[i+1]); }
 });
 document.addEventListener('input', event => {
+  if(event.target.id==='tool-search') filterTools();
   if(event.target.id === 'project-search') $$('.project-card').forEach(card => card.hidden = !card.textContent.toLowerCase().includes(event.target.value.toLowerCase()));
 });
+document.addEventListener('reset',event=>{if(event.target.id==='tool-form') {currentToolResult=null; $('#tool-result').replaceChildren();}});
 document.addEventListener('keydown', event => {
   if(event.key === 'Escape') { if(!$('#auth-dialog').hidden) { closeAuth(); if(!user) location.hash = ''; } sidebar(false); }
   const focusRoot = !$('#auth-dialog').hidden ? $('#auth-dialog') : document.body.classList.contains('sidebar-open') ? $('.app-sidebar') : null;
