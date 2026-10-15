@@ -26,7 +26,7 @@
     "db:migrate:prod": "wrangler d1 migrations apply elancebot-prod --remote"
   },
   "devDependencies": {
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.5",
     "miniflare": "^5.20261006.1-alpha",
     "typescript": "^7.0.2",
     "wrangler": "4.149.0"
