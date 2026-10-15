@@ -8,6 +8,7 @@ Contract: `src/openapi.ts`, served at `/api/v1/openapi`. Errors have `error.code
 | POST auth/register/login/recover | Public, IP/email rate-limited |
 | GET projects/history/dashboard/search | Session or read/write key; owner restricted |
 | Project/review mutations | Session or write key; owner restricted |
+| Experiments and observations | Session or read/write key for reads; session/write for mutations; owner restricted |
 | GET tool-state/tool-runs/results | Session or read/write key; owner restricted |
 | PATCH tool-state; POST/DELETE tool-runs | Session or write key; owner restricted |
 | POST url/analyze | Session/write key, approved host + attestation |
@@ -45,5 +46,7 @@ POST `/insights` accepts `url`, `specialty`, `attested:true`, optional `audience
 Optional `useAi:true` additionally requires configured inference and `aiConsent:true`; otherwise 503. AI is disabled in the current deployment. The implemented adapter enforces 3 requests/account/day and 10/app/day; a provider or invalid-citation failure preserves a non-AI report with an explicit error. API clients must inspect `analysis.result.ai` and `aiError`, not assume every 201 includes an AI draft. No source is sent to a model when `useAi` is false.
 
 ## Remaining production gaps
+
+Experiments: 50/account, 30 creations/hour; immutable bounded plans, optimistic observation versions, prepared owner-qualified queries, full account export and deletion. Project links require ownership and cascade on project deletion. See [experiment contract](experiments.md). Observations are manually supplied and unverified, not provider analytics.
 
 No verified email/OIDC/passkeys/MFA, managed anti-bot, external audit, append-only security trail, pagination or incident SLA. Registration can reveal email existence; review this preview tradeoff. Cleanup is opportunistic, not scheduled. Distributed abuse requires infrastructure controls and budgets.

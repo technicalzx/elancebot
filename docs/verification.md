@@ -1,5 +1,17 @@
 # Preview verification — 2026-10-14
 
+## v0.3 experiment release checks — 2026-10-15
+
+Adds immutable private plans, optional owned-project links, manually supplied baseline/follow-up observations, optimistic version checks, exports and cascades. Migration 0003 applied to preview only and ledger verified. Final layout deployment `aa7c0cd09c144990ba9593dd791364cf`, 2026-10-15 at 02:13 UTC (07:13 Asia/Karachi), is 230.50 KiB / 64.88 KiB gzip with 7 ms reported startup. These are bundle/startup measurements, not Core Web Vitals. Initial functional deployment `9f6f7964e83e48d7b16ceac42bd77a77` passed live smoke, including experiment save/reopen, 5-percentage-point synthetic comparison, stale-write rejection, export and disposable-account cleanup. Exact-head CI is checked during publication; use the repository's CI history for the published SHA.
+
+21 unit tests and five Worker/D1 integration tests passed, including two-user isolation, read-key rejection, quota, invalid dates/counts, missing/zero denominators, version conflicts and project/account deletion. Clean install, typecheck, structure check, build, dependency audit (zero reported vulnerabilities) and whitespace checks passed. A clean install retry was needed after Windows locked the running local test runtime; stop that runtime before reinstalling dependencies. Typecheck was rerun successfully after the install completed.
+
+Browser checks used an isolated local Worker/D1 and synthetic account rather than modifying the user's existing preview session. Verified create/save, reload/reopen, outcome edits, rejected invalid dates with preserved inputs, corrected save, JSON download and inert literal markup. Desktop 1366×900 and mobile 390×844 had equal client/scroll widths (1351 and 375 respectively); mobile fields stacked. Keyboard Tab moved from save to delete, and no warn/error console entries were captured. Viewport override restored. The isolated server was stopped; its ephemeral records are not production data. Live API smoke separately verified the deployed persistence path. Full accessibility, performance and independent VAPT remain pending.
+
+The Elancebot SDLC/QA/security/SEO skills informed owner-qualified persistence, additive migrations, honest metric provenance, export/deletion coverage and preview noindex. No paid inference/rendering or domain change was enabled.
+
+Final deployment live smoke also passed all existing review/tool checks plus experiment save, reopen, comparison, stale-write denial and account export. Its disposable account was removed successfully; the user's existing browser account was not modified.
+
 ## v0.2 current release
 
 Worker deployment `72b2ec3f6d3b48b78bfb387d558ebc37`, deployed 2026-10-14 at 00:38 UTC (05:38 Asia/Karachi). Migrations 0001 and 0002 applied to preview only. Build: 204.87 KiB / 57.74 KiB gzip. Typecheck, structure check, 19 unit tests, four Worker/D1 integration suites, dependency audit (zero reported vulnerabilities) and whitespace checks passed.

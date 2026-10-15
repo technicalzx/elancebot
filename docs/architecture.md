@@ -23,6 +23,7 @@ flowchart LR
 | analyses | id → project | Immutable result JSON, score, version |
 | tool_state | (user, tool) → user | Private favorite and last-opened/used timestamp |
 | tool_runs | id → user | Versioned normalized input/result JSON and creation time |
+| experiments | id → user; optional project | Immutable plan, manual observations, optimistic version and timestamps |
 | api_keys | id → user; unique token hash | Prefix, scope, 30-day expiry |
 | rate_limits | hashed bucket | Atomic counter/expiry |
 | d1_migrations | migration name | Migration ledger |
@@ -30,6 +31,8 @@ flowchart LR
 Foreign keys cascade on deletion. Prepared statements bind inputs. Project/key/tool-result quotas use conditional inserts, not race-prone count-then-insert pairs. Every analysis is authorized through its project; every tool result and favorite is authorized directly by its owner. Current model: **one owner per workspace**, not team roles. Additive migration `0002_tool_workspace.sql` introduces the tool tables without changing existing records.
 
 Tools run on user-supplied data without providers. Saving is optional; an unsaved run stores only the recent-tool marker, not its inputs/results. Saved results preserve their rules version and are included in account export/deletion. Limits are 60 runs/hour and 100 saved results/account. Search covers catalog text plus the current user's project and result titles, not arbitrary full content. New tool families should reuse this framework and add their own accuracy/privacy tests.
+
+v0.3 adds a bounded experiment workflow in `experiments.mjs` and migration 0003. Plans are immutable, observations use compare-and-swap versions, and calculations preserve missing/zero-denominator states. Records are owner-scoped and included in export/deletion; deleting a linked project cascades to experiments. See [measurement and API contract](experiments.md). No new paid service or provider is required.
 
 Native scrypt uses N=16384, r=8, p=5, random salt and 32-byte output. Opaque session/API/recovery values are stored as SHA-256 hashes. Password comparison is constant time. HTTPS cookie: `__Host-elancebot; Secure; HttpOnly; SameSite=Strict; Path=/`; local HTTP uses a development cookie.
 

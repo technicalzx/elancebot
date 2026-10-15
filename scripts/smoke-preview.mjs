@@ -13,7 +13,7 @@ async function call(path, method='GET', body, expectedStatus) {
   else assert.ok(response.ok, `${path}: ${response.status} ${JSON.stringify(data)}`); return data;
 }
 try {
-  assert.equal((await call('/health')).version,'0.2.0');
+  assert.equal((await call('/health')).version,'0.3.0');
   assert.equal((await call('/tools')).catalog.length,12);
   await call('/auth/register','POST',{email,password,name:'Disposable smoke test'});
   console.log('PASS live registration and secure session');
@@ -37,8 +37,17 @@ try {
   assert.equal((await call(`/tool-runs/${calculated.saved.id}`)).run.result.values[0].value,75);
   assert.equal((await call('/search?q=percentage')).toolRuns.length,1);
   console.log('PASS live calculator, favorites, recent tools, saved history and search');
+  const experiment=await call('/experiments','POST',{offer:'Synthetic outcome test',evidence:'Missing scope',change:'Add deliverables',metric:'inquiry-rate',periodDays:7,source:'Synthetic export',projectId:project.id});
+  const baseline={start:'2026-01-01',end:'2026-01-07',outcomes:10,denominator:100,source:'Synthetic export'};
+  const observation={version:1,baseline,followUp:{...baseline,start:'2026-01-08',end:'2026-01-14',outcomes:15}};
+  const observed=await call('/experiments/'+experiment.experiment.id,'PATCH',observation);
+  assert.equal(observed.experiment.comparison.percentagePointChange,5);
+  await call('/experiments/'+experiment.experiment.id,'PATCH',observation,409);
+  assert.equal((await call('/experiments/'+experiment.experiment.id)).experiment.version,2);
+  console.log('PASS live experiment save, outcome comparison, reopen and stale-write rejection');
   const exported = await call('/account/export');
   assert.equal(exported.toolRuns.length,1); assert.equal(exported.toolState.length,1);
+  assert.equal(exported.experiments.length,1);
   console.log('PASS account export includes tool data');
   await call('/auth/logout','POST');
   await call('/auth/login','POST',{email,password}); console.log('PASS live password login');

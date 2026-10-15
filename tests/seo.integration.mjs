@@ -6,7 +6,7 @@ for (const environment of ['preview','production']) test(`${environment} public 
   const origin=environment==='production'?'https://elancebot.com':'https://preview.test';
   const mf=new Miniflare(convertV4MiniflareOptions({name:'seo-'+environment,modules:true,scriptPath:'dist/worker.js',compatibilityDate:'2026-10-13',compatibilityFlags:['nodejs_compat'],bindings:{ENVIRONMENT:environment,PUBLIC_ORIGIN:origin,URL_ALLOWED_HOSTS:''}}));
   try {
-    for(const path of ['/','/toolkit.html']) {
+    for(const path of ['/','/toolkit.html','/experiments.html']) {
       const response=await mf.dispatchFetch(origin+path),html=await response.text();
       assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-cache');
       assert.equal(response.headers.get('x-robots-tag'),environment==='preview'?'noindex, nofollow':null);
@@ -18,7 +18,7 @@ for (const environment of ['preview','production']) test(`${environment} public 
     }
     const robots=await (await mf.dispatchFetch(origin+'/robots.txt')).text();
     if(environment==='production') {assert.match(robots,/Disallow: \/api\//);assert.ok(robots.includes('Sitemap: https://elancebot.com/sitemap.xml'));} else assert.equal(robots,'User-agent: *\nDisallow: /\n');
-    const sitemap=await (await mf.dispatchFetch(origin+'/sitemap.xml')).text();assert.ok(sitemap.includes(origin+'/toolkit.html'));assert.doesNotMatch(sitemap,/#app|\/api\/|\/privacy/);
+    const sitemap=await (await mf.dispatchFetch(origin+'/sitemap.xml')).text();assert.ok(sitemap.includes(origin+'/toolkit.html'));assert.ok(sitemap.includes(origin+'/experiments.html'));assert.doesNotMatch(sitemap,/#app|\/api\/|\/privacy/);
     const api=await mf.dispatchFetch(origin+'/api/v1/tool-runs');assert.equal(api.status,401);assert.equal(api.headers.get('cache-control'),'no-store');assert.equal(api.headers.get('x-robots-tag'),'noindex, nofollow');
     assert.equal((await mf.dispatchFetch(origin+'/unlisted-page')).status,404);
   } finally {await mf.dispose();}

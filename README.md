@@ -7,7 +7,7 @@ An open-source professional workspace for **URL-led gig, profile, service and co
 
 [Try the preview](https://elancebot-preview.abuhuraira-113.workers.dev/) · [API specification](https://elancebot-preview.abuhuraira-113.workers.dev/api/v1/openapi) · [Product & roadmap](docs/product-blueprint.md)
 
-> **v0.2 preview, not the completed product or a production certification.** Scores are deterministic content checklists—not Fiverr, Upwork, LinkedIn or Google rankings. No marketplace scraper, AI model, email provider, billing service or live rank tracker is connected. No promise of placement, revenue or leads. The [full requirements map](docs/requirements-traceability.md) preserves the broader platform scope.
+> **v0.3 preview, not the completed product or a production certification.** Scores are deterministic content checklists—not Fiverr, Upwork, LinkedIn or Google rankings. No marketplace scraper, AI model, email provider, billing service or live rank tracker is connected. No promise of placement, revenue or leads. The [full requirements map](docs/requirements-traceability.md) preserves the broader platform scope.
 
 ## Working features
 
@@ -17,6 +17,7 @@ An open-source professional workspace for **URL-led gig, profile, service and co
 - Profile, gig and service reviews with evidence, weighted criteria and prioritized improvements.
 - Side-by-side competitor comparisons using user-supplied snapshots.
 - Saved projects, editable inputs, revision history, score changes and project search.
+- [Improvement experiments](docs/experiments.md): private plans, optional project links, manual baseline/follow-up counts, source notes, missing-data safeguards, version-conflict protection and JSON export. Observed differences are not causal proof.
 - Searchable, categorized directory of 12 working tools; private favorites, recent tools and workspace search.
 - Freelance pricing, profit/margin/markup, gross salary conversion, percentage and weighted GPA calculators; text counting/case and length/mass/temperature utilities.
 - Shared input validation, explicit formulas/assumptions, copy/reset/JSON export, optional save and reopenable tool history. No invented tax, currency or platform-fee data.

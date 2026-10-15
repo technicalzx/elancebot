@@ -199,6 +199,14 @@ body.app-mode #main-content { min-height: 100dvh; }
 .toolkit-guide h1 { font-size:clamp(32px,5vw,54px); }
 .toolkit-guide h2 { margin-top:32px; }
 .toolkit-guide p { line-height:1.75; }
+.toolkit-guide > .card { padding:24px; margin-block:24px; }
+.toolkit-guide > .card > h2:first-child { margin-top:0; }
+#observation-fields { margin-bottom:24px; }
+#observation-fields fieldset { align-content:start; gap:16px; }
+#observation-fields legend { font-size:20px; font-weight:750; margin-bottom:16px; }
+#saved-experiments { display:grid; gap:10px; padding-left:0; list-style:none; }
+#saved-experiments button { text-align:left; white-space:normal; overflow-wrap:anywhere; }
+#plan-text, #comparison-text { font-family:inherit; font-size:14px; line-height:1.65; }
 .tool-filters { display:flex; flex-wrap:wrap; gap:16px; align-items:end; padding:20px; margin-bottom:16px; }
 .tool-filters label { display:grid; gap:8px; flex:1 1 170px; font-weight:600; }
 .tool-filters input,.tool-filters select { width:100%; min-width:0; padding:10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--ink); font:inherit; }

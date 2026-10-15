@@ -11,7 +11,7 @@ for (const name of await readdir('public')) {
 // a previous release's cached styles or application code.
 for (const [path, asset] of Object.entries(assets)) {
   if (!path.endsWith('.html')) continue;
-  for (const dependency of ['/styles.css', '/app.js', '/insights.js']) {
+  for (const dependency of ['/styles.css', '/app.js', '/insights.js', '/experiments.js']) {
     const version = createHash('sha256').update(assets[dependency].content).digest('hex').slice(0, 12);
     asset.content = asset.content.replaceAll(`"${dependency}"`, `"${dependency}?v=${version}"`);
   }
