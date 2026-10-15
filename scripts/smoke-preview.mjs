@@ -13,7 +13,7 @@ async function call(path, method='GET', body, expectedStatus) {
   else assert.ok(response.ok, `${path}: ${response.status} ${JSON.stringify(data)}`); return data;
 }
 try {
-  assert.equal((await call('/health')).version,'0.3.0');
+  assert.equal((await call('/health')).version,'0.4.0');
   assert.equal((await call('/tools')).catalog.length,12);
   await call('/auth/register','POST',{email,password,name:'Disposable smoke test'});
   console.log('PASS live registration and secure session');
@@ -30,6 +30,12 @@ try {
   const unavailable=await call('/insights','POST',{url:'https://www.upwork.com/freelancers/example',specialty:'Freelance services',attested:true},422);
   assert.equal(unavailable.error.code,'platform_connection_required');
   console.log('PASS URL evidence review, saved reopen and honest unavailable-connector response');
+  const liInput={url:'https://www.linkedin.com/in/synthetic-smoke',goal:'clients',attested:true,keywords:'Terraform',sourceText:'Headline: Terraform infrastructure specialist\nAbout: I help teams deploy infrastructure.\nExperience: Delivered a synthetic demo.'};
+  const li=await call('/linkedin/analyze','POST',liInput);
+  assert.equal(li.analysis.result.structuredProfile.fields.headline,'Terraform infrastructure specialist');
+  assert.equal((await call('/projects/'+li.project.id)).analyses.length,1);
+  await call('/linkedin/analyze','POST',{...liInput,sourceText:''},422);
+  console.log('PASS dedicated LinkedIn JSON mapping, saved review and URL-only boundary');
   const calculated = await call('/tool-runs','POST',{toolId:'percentage',input:{part:45,whole:60},save:true});
   assert.equal(calculated.result.values[0].value,75);
   await call('/tool-state/percentage','PATCH',{favorite:true});

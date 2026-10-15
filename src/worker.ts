@@ -7,6 +7,7 @@ import { openapi } from './openapi';
 import { assets } from './generated-assets.mjs';
 import { findTool, runTool, toolCatalog } from './lib/toolkit.mjs';
 import { experimentPlan, experimentObservations, experimentComparison } from './lib/experiments.mjs';
+import { linkedinInput, analyzeLinkedin } from './lib/linkedin.mjs';
 
 type Row = Record<string, any>;
 type Identity = { id: string; email: string; name: string; scope: 'session' | 'read' | 'write' };
@@ -127,7 +128,7 @@ async function api(request: Request, env: Env, ctx: ExecutionContext) {
   const url = new URL(request.url), path = url.pathname.slice('/api/v1'.length), method = request.method;
   if (!url.pathname.startsWith('/api/v1/')) fail(404, 'not_found', 'API version not found.');
   checkOrigin(request);
-  if (method === 'GET' && path === '/health') return json({ status: 'ok', version: '0.3.0', environment: env.ENVIRONMENT });
+  if (method === 'GET' && path === '/health') return json({ status: 'ok', version: '0.4.0', environment: env.ENVIRONMENT });
   if (method === 'GET' && path === '/openapi') return json(openapi(url.origin));
   if (method === 'GET' && path === '/tools') return json({ tools: ['profile','gig','service','competitor','website'], catalog: toolCatalog, scoringVersion: '1.0.0', allowedUrlHosts: env.URL_ALLOWED_HOSTS.split(',').filter(Boolean), liveRankings: false, aiGenerated: false, urlInsights:{enabled:true,aiEnabled:aiAvailable(env),platformAutoFetch:false}, accountRecovery: 'offline-recovery-code', emailVerified: false });
   if (path.startsWith('/auth/') && method === 'POST') {
@@ -171,6 +172,15 @@ async function api(request: Request, env: Env, ctx: ExecutionContext) {
     fail(404, 'not_found', 'Endpoint not found.');
   }
   const user = await identify(request, env);
+  if(path==='/linkedin/analyze' && method==='POST') {
+    const body=await readJson(request);
+    if(body.attested!==true)fail(400,'attestation_required','Confirm you are authorized to analyze this profile content.');
+    const project=body.projectId?await ownedProject(env,text(body.projectId,100),user):null;
+    if(project && JSON.parse(project.input_json).workflow!=='linkedin')fail(409,'workflow_mismatch','Use a dedicated LinkedIn project for this revision.');
+    await rate(env,'linkedin:'+user.id,20,3600);
+    const input=linkedinInput(body),result=analyzeLinkedin(input);
+    return json(await saveInsight(env,user,project,'LinkedIn: '+(input.profile.headline||input.goal).slice(0,80),'profile',inputData(input),result),201);
+  }
   if(path==='/experiments') {
     if(method==='GET') return json({experiments:(await all(env,'SELECT * FROM experiments WHERE user_id=? ORDER BY updated_at DESC,id DESC',user.id)).map(experimentOut)});
     if(method==='POST') {
@@ -374,7 +384,7 @@ export default {
       if (url.pathname.startsWith('/api/')) response = await api(request, env, ctx);
       else if (!['GET','HEAD'].includes(request.method)) response = new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } });
       else if (url.pathname === '/robots.txt') response = new Response(env.ENVIRONMENT === 'production' ? `User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${env.PUBLIC_ORIGIN}/sitemap.xml\n` : 'User-agent: *\nDisallow: /\n');
-      else if (url.pathname === '/sitemap.xml') response = new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${env.PUBLIC_ORIGIN}/</loc></url><url><loc>${env.PUBLIC_ORIGIN}/toolkit.html</loc></url><url><loc>${env.PUBLIC_ORIGIN}/experiments.html</loc></url></urlset>`, { headers: { 'Content-Type': 'application/xml' } });
+      else if (url.pathname === '/sitemap.xml') response = new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${env.PUBLIC_ORIGIN}/</loc></url><url><loc>${env.PUBLIC_ORIGIN}/toolkit.html</loc></url><url><loc>${env.PUBLIC_ORIGIN}/experiments.html</loc></url><url><loc>${env.PUBLIC_ORIGIN}/linkedin.html</loc></url></urlset>`, { headers: { 'Content-Type': 'application/xml' } });
       else {
         const asset = assets[url.pathname === '/' ? '/index.html' : url.pathname];
         if (asset) {

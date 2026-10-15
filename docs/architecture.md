@@ -38,6 +38,8 @@ Native scrypt uses N=16384, r=8, p=5, random salt and 32-byte output. Opaque ses
 
 ## URL insights path
 
+The dedicated LinkedIn workflow reuses the same owner-scoped projects/immutable analyses and atomic save transaction. `linkedin.mjs` validates the reference URL and maps explicitly supplied sections to a versioned schema; it never fetches LinkedIn or treats imported provenance as verified. See [current/future architecture assessment](product-evolution.md) for module boundaries, risks and incremental implementation order.
+
 `POST /insights` validates authorization, source references, consent and quotas before processing. `website.ts` extracts bounded text and metadata from approved HTML, excluding scripts, navigation and explicitly hidden elements. It does not execute client-side rendering or claim to reproduce the full visible page. Marketplace URLs accept only authorized supplied snapshots. Every source preserves its URL, retrieval type, recorded time and exact analyzed text (100–8,000 characters).
 
 `insights.mjs` provides versioned, deterministic offer/proof/process/commercial/next-step observations, exact target-phrase counts, competitor gaps and suggested actions. These signals do not establish actual quality, demand, rank or revenue. Saved source input and immutable analysis are committed in one D1 batch; quota rejection does not overwrite the prior draft. Sources are included in owner-only export and deletion. A revised snapshot is labeled as supplied, not as a live platform update.

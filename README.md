@@ -7,9 +7,11 @@ An open-source professional workspace for **URL-led gig, profile, service and co
 
 [Try the preview](https://elancebot-preview.abuhuraira-113.workers.dev/) · [API specification](https://elancebot-preview.abuhuraira-113.workers.dev/api/v1/openapi) · [Product & roadmap](docs/product-blueprint.md)
 
-> **v0.3 preview, not the completed product or a production certification.** Scores are deterministic content checklists—not Fiverr, Upwork, LinkedIn or Google rankings. No marketplace scraper, AI model, email provider, billing service or live rank tracker is connected. No promise of placement, revenue or leads. The [full requirements map](docs/requirements-traceability.md) preserves the broader platform scope.
+> **v0.4 preview, not the completed product or a production certification.** Scores are deterministic content checklists—not Fiverr, Upwork, LinkedIn or Google rankings. No marketplace scraper, AI model, email provider, billing service or live rank tracker is connected. No promise of placement, revenue or leads. The [full requirements map](docs/requirements-traceability.md) preserves the broader platform scope.
 
 ## Working features
+
+- Dedicated [LinkedIn workspace](https://elancebot-preview.abuhuraira-113.workers.dev/linkedin.html): authorized JSON/labeled-text mapping, goal-specific evidence review, phrase coverage, saved revisions and JSON exports. URL-only extraction is unavailable without an approved connector. See the [feature priorities and architecture review](docs/product-evolution.md).
 
 - Private accounts with salted scrypt password hashing, secure sessions and single-use offline recovery codes.
 - URL-led reviews with source snapshots, evidence excerpts, competitor gaps, target-phrase counts, prioritized actions and editable revision comparisons. Approved websites can supply content directly; Fiverr, Upwork and LinkedIn currently require authorized text imports. A pasted snapshot is never labeled as fetched.

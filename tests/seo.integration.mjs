@@ -6,7 +6,7 @@ for (const environment of ['preview','production']) test(`${environment} public 
   const origin=environment==='production'?'https://elancebot.com':'https://preview.test';
   const mf=new Miniflare(convertV4MiniflareOptions({name:'seo-'+environment,modules:true,scriptPath:'dist/worker.js',compatibilityDate:'2026-10-13',compatibilityFlags:['nodejs_compat'],bindings:{ENVIRONMENT:environment,PUBLIC_ORIGIN:origin,URL_ALLOWED_HOSTS:''}}));
   try {
-    for(const path of ['/','/toolkit.html','/experiments.html']) {
+    for(const path of ['/','/toolkit.html','/experiments.html','/linkedin.html']) {
       const response=await mf.dispatchFetch(origin+path),html=await response.text();
       assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-cache');
       assert.equal(response.headers.get('x-robots-tag'),environment==='preview'?'noindex, nofollow':null);

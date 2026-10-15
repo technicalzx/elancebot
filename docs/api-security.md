@@ -47,6 +47,8 @@ Optional `useAi:true` additionally requires configured inference and `aiConsent:
 
 ## Remaining production gaps
 
+POST `/linkedin/analyze` requires a session/write key, attestation and strict LinkedIn `/in/` URL. It maps authorized six-field JSON/labeled text, preserves missingness and saves an owned project/revision. URL alone returns 422 without an outbound request. Source maximum 12,000 characters, 20 attempts/hour; existing project/revision quotas and export/deletion apply. See [the dedicated contract](product-evolution.md).
+
 Experiments: 50/account, 30 creations/hour; immutable bounded plans, optimistic observation versions, prepared owner-qualified queries, full account export and deletion. Project links require ownership and cascade on project deletion. See [experiment contract](experiments.md). Observations are manually supplied and unverified, not provider analytics.
 
 No verified email/OIDC/passkeys/MFA, managed anti-bot, external audit, append-only security trail, pagination or incident SLA. Registration can reveal email existence; review this preview tradeoff. Cleanup is opportunistic, not scheduled. Distributed abuse requires infrastructure controls and budgets.

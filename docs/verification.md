@@ -1,5 +1,17 @@
 # Preview verification — 2026-10-14
 
+## v0.4 LinkedIn release checks — 2026-10-15
+
+Dedicated LinkedIn JSON/labeled-text mapping and goal-specific evidence review reuse private projects and immutable analyses. No schema migration, provider connection, AI binding or domain change. Deployment `aec11d69dad84eae821e23b03ac0676d` at 02:35 UTC reports 8 ms startup; final bundle is 250.88 KiB / 71.20 KiB gzip. Startup is not a Core Web Vitals measurement.
+
+23 unit tests and six Worker/D1 integration tests passed. Typecheck, project structure, build, dependency audit (zero reported vulnerabilities) and whitespace checks passed. Dedicated tests cover URL/input restrictions, unknown fields, exported JSON reimport, missing source rejection without persistence, authorization, read-only API scope rejection, cross-user isolation, export and deletion. No outbound LinkedIn request is made.
+
+Isolated browser QA with synthetic data verified navigation, four-section mapping, jobs/client goal priorities, a second revision, reload/reopen, historical revision selection and profile JSON download. At 390×844 the client and scroll widths both measured 375 CSS pixels; inspected mobile layout had no horizontal overflow. No warning/error console entries were captured. Viewport restored and local ephemeral server stopped. This is not a full accessibility or independent penetration audit.
+
+Live smoke passed the dedicated LinkedIn save/reopen and explicit URL-only rejection, plus all existing account, URL review, calculator, experiment, export and login checks. The disposable preview account was successfully removed. The user's browser account was not modified.
+
+The SDLC/QA/security/SEO skills informed provenance, ownership tests, additive release boundaries and preview crawl controls. The market-informed roadmap and current/future architecture findings are in [product evolution](product-evolution.md). Demand hypotheses still require customer validation. URL-only LinkedIn extraction and personalized AI output remain unavailable; the UI states both limitations.
+
 ## v0.3 experiment release checks — 2026-10-15
 
 Adds immutable private plans, optional owned-project links, manually supplied baseline/follow-up observations, optimistic version checks, exports and cascades. Migration 0003 applied to preview only and ledger verified. Final layout deployment `aa7c0cd09c144990ba9593dd791364cf`, 2026-10-15 at 02:13 UTC (07:13 Asia/Karachi), is 230.50 KiB / 64.88 KiB gzip with 7 ms reported startup. These are bundle/startup measurements, not Core Web Vitals. Initial functional deployment `9f6f7964e83e48d7b16ceac42bd77a77` passed live smoke, including experiment save/reopen, 5-percentage-point synthetic comparison, stale-write rejection, export and disposable-account cleanup. Exact-head CI is checked during publication; use the repository's CI history for the published SHA.
