@@ -41,7 +41,7 @@ test('real Worker + D1 lifecycle, ownership, scopes, recovery, CSRF and deletion
     assert.equal((await request('/api/v1/api-keys',{key})).status,403);
     const writeKey = await request('/api/v1/api-keys',{...session,method:'POST',body:{name:'test write',scope:'write'}});
     assert.equal((await request('/api/v1/projects/'+id+'/analyses',{key:writeKey.result.secret,method:'POST'})).status,201);
-    const catalog=await request('/api/v1/tools'); assert.equal(catalog.result.catalog.length,12);
+    const catalog=await request('/api/v1/tools'); assert.equal(catalog.result.catalog.length,17);
     const run=await request('/api/v1/tool-runs',{...session,method:'POST',body:{toolId:'percentage',input:{part:18,whole:24},save:true}});
     assert.equal(run.status,201,JSON.stringify(run.result)); assert.equal(run.result.result.values[0].value,75); const runId=run.result.saved.id;
     assert.equal((await request('/api/v1/tool-runs/'+runId,{cookie:b.cookie})).status,404);

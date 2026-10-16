@@ -1,4 +1,5 @@
 import { fail } from './security.mjs';
+import { professionalTools, runProfessionalTool } from './professional.mjs';
 
 const numeric = (key, label, min, max, value) => ({key,label,type:'number',min,max,value,required:true});
 const select = (key,label,options,value) => ({key,label,type:'select',options,value,required:true});
@@ -13,7 +14,8 @@ export const toolCatalog = [
   {id:'percentage',name:'Percentage calculator',category:'Calculators',subcategory:'Education',mode:'calculator',summary:'Calculate what percentage one quantity is of another; useful for marks and attendance.',fields:[numeric('part','Part / earned amount',-1e12,1e12,18),numeric('whole','Whole / possible amount',0.000001,1e12,24)]},
   {id:'weighted-gpa',name:'Weighted GPA calculator',category:'Calculators',subcategory:'Education',mode:'calculator',summary:'Use your institution’s grade points and course credits. No institution-specific grade conversion is assumed.',fields:[numeric('scale','Maximum grade-point scale',1,100,4),{key:'courses',label:'Courses: credits, grade points (one per line)',type:'textarea',maxLength:5000,required:true,value:'3,4\n4,3'}]},
   {id:'text-tools',name:'Text counter & case converter',category:'Converters',subcategory:'Text',mode:'utility',summary:'Count Unicode characters, estimate reading time, and change letter case. No AI or grammar claims.',fields:[{key:'text',label:'Your text',type:'textarea',maxLength:20000,required:true,value:''},select('letterCase','Letter case',[option('unchanged','Keep original'),option('upper','UPPERCASE'),option('lower','lowercase')],'unchanged'),numeric('wordsPerMinute','Assumed reading speed (words/minute)',50,1000,200)]},
-  {id:'unit-converter',name:'Length, mass & temperature',category:'Converters',subcategory:'Units',mode:'utility',summary:'Convert compatible metric/imperial units with explicit units and precision.',fields:[numeric('value','Value',-1e12,1e12,1),select('from','From unit',unitOptions,'m'),select('to','To unit',unitOptions,'ft')]}
+  {id:'unit-converter',name:'Length, mass & temperature',category:'Converters',subcategory:'Units',mode:'utility',summary:'Convert compatible metric/imperial units with explicit units and precision.',fields:[numeric('value','Value',-1e12,1e12,1),select('from','From unit',unitOptions,'m'),select('to','To unit',unitOptions,'ft')]},
+  ...professionalTools
 ];
 export const findTool = id => toolCatalog.find(t=>t.id===id);
 const round = (v,places=2) => Number(v.toFixed(places));
@@ -25,7 +27,7 @@ function number(value,label,min,max) {
 }
 export function runTool(id,raw) {
   const tool=findTool(id);
-  if(!tool || tool.mode==='review') fail(400,'unsupported_tool','Choose a calculator or utility from the tool directory.');
+  if(!tool || tool.mode==='review') fail(400,'unsupported_tool','Choose an available workflow, calculator or utility from the tool directory.');
   if(!raw || typeof raw!=='object' || Array.isArray(raw)) fail(400,'invalid_input','Tool inputs must be an object.');
   const input={};
   for(const f of tool.fields) {
@@ -34,6 +36,8 @@ export function runTool(id,raw) {
     else if(f.type==='select') { if(!f.options.some(o=>o.value===value)) fail(400,'invalid_input',`${f.label}: choose a supported option.`); input[f.key]=value; }
     else { if(typeof value!=='string' || !value.trim() || value.length>f.maxLength) fail(400,'invalid_input',`${f.label}: enter text up to ${f.maxLength} characters.`); input[f.key]=value; }
   }
+  const professional=runProfessionalTool(id,input);
+  if(professional) return {toolId:id,toolName:tool.name,version:'1.0.0',input,...professional};
   const values=[],explanations=[],recommendations=[];
   const add=(label,value,unit='')=>values.push({label,value,unit});
   const limitations=['Calculated from your supplied inputs, not live market data. Check assumptions before relying on the result.'];

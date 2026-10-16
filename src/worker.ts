@@ -128,7 +128,7 @@ async function api(request: Request, env: Env, ctx: ExecutionContext) {
   const url = new URL(request.url), path = url.pathname.slice('/api/v1'.length), method = request.method;
   if (!url.pathname.startsWith('/api/v1/')) fail(404, 'not_found', 'API version not found.');
   checkOrigin(request);
-  if (method === 'GET' && path === '/health') return json({ status: 'ok', version: '0.4.0', environment: env.ENVIRONMENT });
+  if (method === 'GET' && path === '/health') return json({ status: 'ok', version: '0.5.0', environment: env.ENVIRONMENT });
   if (method === 'GET' && path === '/openapi') return json(openapi(url.origin));
   if (method === 'GET' && path === '/tools') return json({ tools: ['profile','gig','service','competitor','website'], catalog: toolCatalog, scoringVersion: '1.0.0', allowedUrlHosts: env.URL_ALLOWED_HOSTS.split(',').filter(Boolean), liveRankings: false, aiGenerated: false, urlInsights:{enabled:true,aiEnabled:aiAvailable(env),platformAutoFetch:false}, accountRecovery: 'offline-recovery-code', emailVerified: false });
   if (path.startsWith('/auth/') && method === 'POST') {

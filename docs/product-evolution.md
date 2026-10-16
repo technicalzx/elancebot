@@ -7,15 +7,15 @@ This is desk research, not proof of demand, uniqueness or willingness to pay. Ex
 | Order | Feature / problem | Acceptance and dependency |
 | --- | --- | --- |
 | Now | Dedicated LinkedIn profile workspace | URL recognition, authorized structured import, visible JSON/provenance, goal-specific section guidance, private revisions/export. URL-only extraction remains blocked on approved access. |
-| Next | Job brief → evidence-fit and proposal outline | Highlight supported skills and missing requirements with exact source references; no invented experience or automatic sending. Use supplied job text; evaluate with five observed user sessions. |
-| Next | Fiverr offer/package consistency review | Compare title, deliverables, exclusions, buyer requirements and packages for contradictions; use explicit supplied prices/currencies. Do not infer rank or demand. |
+| Implemented locally in v0.5 | Job brief → evidence-fit and proposal outline | Highlight supported skills and missing requirements with exact source references; no invented experience or automatic sending. Use supplied job text; evaluate with five observed user sessions. |
+| Implemented locally in v0.5 | Fiverr offer/package consistency review | Compare title, deliverables, exclusions, buyer requirements and packages for contradictions; use explicit supplied prices/currencies. Do not infer rank or demand. |
 | Next | Action checklist tied to a review revision | Persist user decisions and completion; link the chosen action to an experiment and immutable original evidence. Test isolation and deleted-parent behavior. |
 | Next | Outcome CSV import with preview | Field mapping, date/timezone/count checks, duplicates, dry-run confirmation, provenance and rollback by import batch. No automatic third-party transfer. |
 | Later | Case-study/portfolio evidence builder | Convert authorized project facts into a reviewable outline; flag missing proof instead of fabricating achievements. |
 | Gated | Approved profile connectors and evaluated AI | Actual provider permissions, consent/revocation, spend ceiling, documented supported fields and live quality tests. |
 | After validation | Teams, billing, scheduled monitoring | Membership roles, tenant isolation, entitlements, idempotent billing webhooks and approved retention/cost policy. |
 
-The first three forthcoming features are hypotheses to validate against recent user problems, completion time, repeat usage and usefulness. Do not publish invented adoption metrics. The full original scope remains in requirements-traceability.md.
+The first three priorities are hypotheses to validate against recent user problems, completion time, repeat usage and usefulness. Do not publish invented adoption metrics. The full original scope remains in requirements-traceability.md.
 
 ## Current architecture assessment
 
@@ -62,3 +62,7 @@ Normalized profile JSON exposes missing sections, source format and unverified s
 For every addition: contract and threat cases → pure normalization/analysis → owner-scoped persistence → UI with missing/error states → unit and real Worker/D1 tests → disposable browser/live checks → exact-head CI → isolated preview. Add schema migrations rather than mutating historical migration files; test upgrades against representative synthetic data and preserve old report renderers. Keep previous Worker artifact and verify schema compatibility for rollback. No architecture can guarantee zero issues; these controls reduce change risk and make failures diagnosable.
 
 Production gates remain verified identity, anti-abuse, independent security/accessibility checks, measured performance/load/cost, restoration, retention/legal/operator decisions and the explicitly deferred domain. No market validation, scalability capacity or compliance certification is claimed.
+
+## Account migration handoff — 2026-10-16
+
+Five supplied-evidence workflows are now implemented and tested locally; see [contracts and limitations](professional-workflows.md). No GitHub publication or Cloudflare deployment was performed during this account-switch preparation. The main-account publication must rerun exact-commit CI and preview checks. Production and the rest of the requirements map remain open.

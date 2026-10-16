@@ -13,7 +13,7 @@ async function call(path, method='GET', body, expectedStatus) {
   else assert.ok(response.ok, `${path}: ${response.status} ${JSON.stringify(data)}`); return data;
 }
 try {
-  assert.equal((await call('/health')).version,'0.4.0');
+  assert.equal((await call('/health')).version,'0.5.0');
   assert.equal((await call('/tools')).catalog.length,12);
   await call('/auth/register','POST',{email,password,name:'Disposable smoke test'});
   console.log('PASS live registration and secure session');

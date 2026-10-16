@@ -1,5 +1,13 @@
 # Preview verification — 2026-10-14
 
+## v0.5 local migration preparation — 2026-10-16
+
+Five professional workflows extend the shared catalog to 17 tools. Clean locked install, structure check, generated types/TypeScript, 28 unit tests, seven isolated Worker/D1 integration tests, deployment dry run and dependency audit passed (zero reported vulnerabilities). New integration coverage exercises all five save/reopen paths, exact persisted results, cross-owner denial, invalid input without a new record, account export/deletion and no outbound requests. No schema change or provider was added.
+
+Local browser QA used an ephemeral Worker/D1 and a synthetic account. All five default workflows ran and saved. Tool history listed all five; a saved job-evidence result reopened after reload. JSON download and browser clipboard copy contained the expected tool ID. At a requested QA viewport of 390×844, client/scroll widths were both 375 CSS pixels. Screenshots are in ignored outputs/. No browser warn/error entries were captured. Viewport reset after the test. No screen-reader, independent security, load or Core Web Vitals pass is claimed.
+
+This release is local only. The published preview remains v0.4. GitHub CI for v0.5, deployment, live smoke and custom-domain verification must happen after the owner connects the main account. Repository backup restoration is separate from restoration of a hosted D1 database; production backup/operations gates remain open.
+
 ## v0.4 LinkedIn release checks — 2026-10-15
 
 Dedicated LinkedIn JSON/labeled-text mapping and goal-specific evidence review reuse private projects and immutable analyses. No schema migration, provider connection, AI binding or domain change. Deployment `aec11d69dad84eae821e23b03ac0676d` at 02:35 UTC reports 8 ms startup; final bundle is 250.88 KiB / 71.20 KiB gzip. Startup is not a Core Web Vitals measurement.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 — prepared locally, 2026-10-16
+
+- Add five supplied-evidence career, proposal, offer package and content workflows through the shared tool catalog and private result lifecycle.
+- Preserve exact evidence, Unicode literal-match boundaries, explicit missing phrases and format-specific templates without AI or market claims.
+- Add package/currency validation and two-user Worker/D1 lifecycle tests.
+- Document feature contracts and remaining original requirements. GitHub publication and preview deployment await the main-account migration.
+
+
 All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) once stable releases begin.
