@@ -90,4 +90,4 @@ See [product phases](product-blueprint.md) for the remaining toolkit and [operat
 
 ## Organization publication handoff — 2026-10-16
 
-The source is prepared for `AbiHurairah-OpenSource/elancebot`, owned by `@AbuHurairh`. Historical CI links above refer to the original account. New-organization CI and preview deployment must be recorded separately after publishing; no old passing run is claimed as verification of the new commit. The hosted preview currently remains v0.4.
+The source is prepared for `technicalzx/elancebot`, owned by `@AbuHurairh`. Historical CI links above refer to the original account. New-organization CI and preview deployment must be recorded separately after publishing; no old passing run is claimed as verification of the new commit. The hosted preview currently remains v0.4.

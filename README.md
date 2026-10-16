@@ -1,6 +1,6 @@
 # Elancebot
 
-[![CI](https://github.com/AbiHurairah-OpenSource/elancebot/actions/workflows/ci.yml/badge.svg)](https://github.com/AbiHurairah-OpenSource/elancebot/actions/workflows/ci.yml)
+[![CI](https://github.com/technicalzx/elancebot/actions/workflows/ci.yml/badge.svg)](https://github.com/technicalzx/elancebot/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
 An open-source professional workspace for **URL-led gig, profile, service and competitor reviews**. Inspect source evidence, compare offers and target phrases, improve your draft, and save a revision. Practical calculators and text/unit utilities support the wider workspace.

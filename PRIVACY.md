@@ -25,4 +25,4 @@ Users can edit, export JSON, revoke keys and delete projects/tool results/accoun
 
 Do not enter sensitive client information, third-party credentials or unnecessary personal data. No MFA, email verification or recovery email is present. Losing both password and recovery code prevents self-service recovery.
 
-Before production, publish a real operator contact, applicable terms, lawful basis and retention schedule; confirm processor agreements, residency and backup retention; establish rights-request and incident procedures. No GDPR, SOC 2 or ISO 27001 certification is claimed. The preview is maintained through [AbiHurairah-OpenSource/elancebot](https://github.com/AbiHurairah-OpenSource/elancebot); never post private data in public issues.
+Before production, publish a real operator contact, applicable terms, lawful basis and retention schedule; confirm processor agreements, residency and backup retention; establish rights-request and incident procedures. No GDPR, SOC 2 or ISO 27001 certification is claimed. The preview is maintained through [technicalzx/elancebot](https://github.com/technicalzx/elancebot); never post private data in public issues.
