@@ -1,13 +1,13 @@
 # Elancebot
 
-[![CI](https://github.com/ycgiio/elancebot/actions/workflows/ci.yml/badge.svg)](https://github.com/ycgiio/elancebot/actions/workflows/ci.yml)
+[![CI](https://github.com/AbiHurairah-OpenSource/elancebot/actions/workflows/ci.yml/badge.svg)](https://github.com/AbiHurairah-OpenSource/elancebot/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
 An open-source professional workspace for **URL-led gig, profile, service and competitor reviews**. Inspect source evidence, compare offers and target phrases, improve your draft, and save a revision. Practical calculators and text/unit utilities support the wider workspace.
 
 [Try the preview](https://elancebot-preview.abuhuraira-113.workers.dev/) · [API specification](https://elancebot-preview.abuhuraira-113.workers.dev/api/v1/openapi) · [Product & roadmap](docs/product-blueprint.md)
 
-> **v0.5 is prepared and tested locally; the published preview remains v0.4 until the main-account migration. This is not the completed product or a production certification.** Scores are deterministic content checklists—not Fiverr, Upwork, LinkedIn or Google rankings. No marketplace scraper, AI model, email provider, billing service or live rank tracker is connected. No promise of placement, revenue or leads. The [full requirements map](docs/requirements-traceability.md) preserves the broader platform scope.
+> **v0.5 source is tested locally; the hosted preview currently remains v0.4. This is not the completed product or a production certification.** Scores are deterministic content checklists—not Fiverr, Upwork, LinkedIn or Google rankings. No marketplace scraper, AI model, email provider, billing service or live rank tracker is connected. No promise of placement, revenue or leads. The [full requirements map](docs/requirements-traceability.md) preserves the broader platform scope.
 
 ## Working features
 

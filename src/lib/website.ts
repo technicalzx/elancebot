@@ -6,7 +6,7 @@ export async function readWebsite(value: string, allowedHosts: string, ownPage?:
   let response: Response;
   try {
     response = ownPage || await fetch(url.href, { redirect: 'manual', signal: AbortSignal.timeout(8000),
-      headers: { 'User-Agent': 'Elancebot/0.2 (+https://github.com/ycgiio/elancebot)', Accept: 'text/html' } });
+      headers: { 'User-Agent': 'Elancebot/0.2 (+https://github.com/AbiHurairah-OpenSource/elancebot)', Accept: 'text/html' } });
   } catch { fail(502, 'fetch_failed', 'The website did not respond within eight seconds.'); }
   if (!response!.ok) { await response!.body?.cancel(); fail(422, 'website_status', 'The website must return a direct successful page (redirects are not followed).'); }
   if (!response!.headers.get('content-type')?.includes('text/html')) { await response!.body?.cancel(); fail(422, 'html_required', 'The URL must return an HTML page.'); }
